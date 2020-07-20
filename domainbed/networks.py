@@ -9,23 +9,6 @@ from domainbed.lib import misc
 from domainbed.lib import wide_resnet
 
 
-class Identity(nn.Module):
-    """An identity layer"""
-    def __init__(self):
-        super(Identity, self).__init__()
-
-    def forward(self, x):
-        return x
-
-class SqueezeLastTwo(nn.Module):
-    """A module which squeezes the last two dimensions, ordinary squeeze can be a problem for batch size 1"""
-    def __init__(self):
-        super(SqueezeLastTwo, self).__init__()
-
-    def forward(self, x):
-        return x.view(x.shape[0], x.shape[1])
-
-
 class MLP(nn.Module):
     """Just  an MLP"""
     def __init__(self, n_inputs, n_outputs, hparams):
@@ -49,40 +32,32 @@ class MLP(nn.Module):
         x = self.output(x)
         return x
 
-class ResNet(torch.nn.Module):
-    """ResNet with the softmax chopped off and the batchnorm frozen"""
-    def __init__(self, input_shape, hparams):
-        super(ResNet, self).__init__()
-        if hparams['resnet18']:
-            self.network = torchvision.models.resnet18(pretrained=True)
-            self.n_outputs = 512
-        else:
-            self.network = torchvision.models.resnet50(pretrained=True)
-            self.n_outputs = 2048
+class ResNet50(torch.nn.Module):
+    """ResNet50 with the softmax chopped off and the batchnorm frozen"""
+    n_outputs = 2048
 
-        # adapt number of channels
-        nc = input_shape[0]
-        if nc != 3:
-            tmp = self.network.conv1.weight.data.clone()
-
-            self.network.conv1 = nn.Conv2d(
-                nc, 64, kernel_size=(7, 7),
-                stride=(2, 2), padding=(3, 3), bias=False)
-
-            for i in range(nc):
-                self.network.conv1.weight.data[:, i, :, :] = tmp[:, i % 3, :, :]
-
-        # save memory
-        del self.network.fc
-        self.network.fc = Identity()
-
+    def __init__(self, hparams):
+        super(ResNet50, self).__init__()
+        # self.network = torchvision.models.resnet18(pretrained=True)
+        self.network = torchvision.models.resnet50(pretrained=True)
         self.freeze_bn()
         self.hparams = hparams
         self.dropout = nn.Dropout(hparams['resnet_dropout'])
 
     def forward(self, x):
         """Encode x into a feature vector of size n_outputs."""
-        return self.dropout(self.network(x))
+        x = self.network.conv1(x)
+        x = self.network.bn1(x)
+        x = self.network.relu(x)
+        x = self.network.maxpool(x)
+        x = self.network.layer1(x)
+        x = self.network.layer2(x)
+        x = self.network.layer3(x)
+        x = self.network.layer4(x)
+        x = self.network.avgpool(x)
+        x = torch.flatten(x, 1)
+        x = self.dropout(x)
+        return x
 
     def train(self, mode=True):
         """
@@ -117,9 +92,6 @@ class MNIST_CNN(nn.Module):
         self.bn2 = nn.GroupNorm(8, 128)
         self.bn3 = nn.GroupNorm(8, 128)
 
-        self.avgpool = nn.AdaptiveAvgPool2d((1,1))
-        self.squeezeLastTwo = SqueezeLastTwo()
-
     def forward(self, x):
         x = self.conv1(x)
         x = F.relu(x)
@@ -137,51 +109,16 @@ class MNIST_CNN(nn.Module):
         x = F.relu(x)
         x = self.bn3(x)
 
-        x = self.avgpool(x)
-        x = self.squeezeLastTwo(x)
+        x = x.mean(dim=(2,3))
         return x
-
-class ContextNet(nn.Module):
-    def __init__(self, input_shape):
-        super(ContextNet, self).__init__()
-
-        # Keep same dimensions
-        padding = (5 - 1) // 2
-        self.context_net = nn.Sequential(
-            nn.Conv2d(input_shape[0], 64, 5, padding=padding),
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, 5, padding=padding),
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-            nn.Conv2d(64, 1, 5, padding=padding),
-        )
-
-    def forward(self, x):
-        return self.context_net(x)
-
 
 def Featurizer(input_shape, hparams):
     """Auto-select an appropriate featurizer for the given input shape."""
-    if len(input_shape) == 1:
-        return MLP(input_shape[0], 128, hparams)
+    if input_shape == (2048,):
+        return MLP(2048, 128, hparams)
     elif input_shape[1:3] == (28, 28):
         return MNIST_CNN(input_shape)
-    elif input_shape[1:3] == (32, 32):
-        return wide_resnet.Wide_ResNet(input_shape, 16, 2, 0.)
-    elif input_shape[1:3] == (224, 224):
-        return ResNet(input_shape, hparams)
-    else:
-        raise NotImplementedError
-
-
-def Classifier(in_features, out_features, is_nonlinear=False):
-    if is_nonlinear:
-        return torch.nn.Sequential(
-            torch.nn.Linear(in_features, in_features // 2),
-            torch.nn.ReLU(),
-            torch.nn.Linear(in_features // 2, in_features // 4),
-            torch.nn.ReLU(),
-            torch.nn.Linear(in_features // 4, out_features))
-    else:
-        return torch.nn.Linear(in_features, out_features)
+    elif input_shape == (3, 32, 32):
+        return wide_resnet.Wide_ResNet(16, 2, 0.)
+    elif input_shape == (3, 224, 224):
+        return ResNet50(hparams)

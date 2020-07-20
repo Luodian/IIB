@@ -11,9 +11,6 @@ import uuid
 import json
 import os
 
-from wilds.datasets.camelyon17_dataset import Camelyon17Dataset
-from wilds.datasets.fmow_dataset import FMoWDataset 
-
 
 # utils #######################################################################
 
@@ -50,56 +47,46 @@ def download_and_extract(url, dst, remove=True):
 
 # VLCS ########################################################################
 
-# Slower, but builds dataset from the original sources
-#
-# def download_vlcs(data_dir):
-#     full_path = stage_path(data_dir, "VLCS")
-# 
-#     tmp_path = os.path.join(full_path, "tmp/")
-#     if not os.path.exists(tmp_path):
-#         os.makedirs(tmp_path)
-# 
-#     with open("domainbed/misc/vlcs_files.txt", "r") as f:
-#         lines = f.readlines()
-#         files = [line.strip().split() for line in lines]
-# 
-#     download_and_extract("http://pjreddie.com/media/files/VOCtrainval_06-Nov-2007.tar",
-#                          os.path.join(tmp_path, "voc2007_trainval.tar"))
-#     
-#     download_and_extract("https://drive.google.com/uc?id=1I8ydxaAQunz9R_qFFdBFtw6rFTUW9goz",
-#                          os.path.join(tmp_path, "caltech101.tar.gz"))
-#     
-#     download_and_extract("http://groups.csail.mit.edu/vision/Hcontext/data/sun09_hcontext.tar",
-#                          os.path.join(tmp_path, "sun09_hcontext.tar"))
-#     
-#     tar = tarfile.open(os.path.join(tmp_path, "sun09.tar"), "r:")
-#     tar.extractall(tmp_path)
-#     tar.close()
-# 
-#     for src, dst in files:
-#         class_folder = os.path.join(data_dir, dst)
-# 
-#         if not os.path.exists(class_folder):
-#             os.makedirs(class_folder)
-# 
-#         dst = os.path.join(class_folder, uuid.uuid4().hex + ".jpg")
-# 
-#         if "labelme" in src:
-#             # download labelme from the web 
-#             gdown.download(src, dst, quiet=False)
-#         else:
-#             src = os.path.join(tmp_path, src)
-#             shutil.copyfile(src, dst)
-# 
-#     shutil.rmtree(tmp_path)
-
-
 def download_vlcs(data_dir):
-    # Original URL: http://www.eecs.qmul.ac.uk/~dl307/project_iccv2017
     full_path = stage_path(data_dir, "VLCS")
 
-    download_and_extract("https://drive.google.com/uc?id=1skwblH1_okBwxWxmRsp9_qi15hyPpxg8",
-                         os.path.join(data_dir, "VLCS.tar.gz"))
+    tmp_path = os.path.join(full_path, "tmp/")
+    if not os.path.exists(tmp_path):
+        os.makedirs(tmp_path)
+
+    with open("../misc/vlcs_files.txt", "r") as f:
+        lines = f.readlines()
+        files = [line.strip().split() for line in lines]
+
+    download_and_extract("http://pjreddie.com/media/files/VOCtrainval_06-Nov-2007.tar",
+                         os.path.join(tmp_path, "voc2007_trainval.tar"))
+    
+    download_and_extract("https://drive.google.com/uc?id=1I8ydxaAQunz9R_qFFdBFtw6rFTUW9goz",
+                         os.path.join(tmp_path, "caltech101.tar.gz"))
+    
+    download_and_extract("http://groups.csail.mit.edu/vision/Hcontext/data/sun09_hcontext.tar",
+                         os.path.join(tmp_path, "sun09_hcontext.tar"))
+    
+    tar = tarfile.open(os.path.join(tmp_path, "sun09.tar"), "r:")
+    tar.extractall(tmp_path)
+    tar.close()
+
+    for src, dst in files:
+        class_folder = os.path.join(data_dir, dst)
+
+        if not os.path.exists(class_folder):
+            os.makedirs(class_folder)
+
+        dst = os.path.join(class_folder, uuid.uuid4().hex + ".jpg")
+
+        if "labelme" in src:
+            # download labelme from the web 
+            gdown.download(src, dst, quiet=False)
+        else:
+            src = os.path.join(tmp_path, src)
+            shutil.copyfile(src, dst)
+
+    shutil.rmtree(tmp_path)
 
 
 # MNIST #######################################################################
@@ -154,7 +141,7 @@ def download_domain_net(data_dir):
     for url in urls:
         download_and_extract(url, os.path.join(full_path, url.split("/")[-1]))
    
-    with open("domainbed/misc/domain_net_duplicates.txt", "r") as f:
+    with open("../misc/domain_net_duplicates.txt", "r") as f:
         for line in f.readlines():
             try:
                 os.remove(os.path.join(full_path, line.strip()))
@@ -243,30 +230,14 @@ def download_terra_incognita(data_dir):
     os.remove(annotations_file)
 
 
-# SVIRO #################################################################
-
-def download_sviro(data_dir):
-    # Original URL: https://sviro.kl.dfki.de
-    full_path = stage_path(data_dir, "sviro")
-    
-    download_and_extract("https://sviro.kl.dfki.de/?wpdmdl=1731", 
-                         os.path.join(data_dir, "sviro_grayscale_rectangle_classification.zip"))
-
-    os.rename(os.path.join(data_dir, "SVIRO_DOMAINBED"), 
-              full_path)
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Download datasets')
     parser.add_argument('--data_dir', type=str, required=True)
     args = parser.parse_args()
 
-    # download_mnist(args.data_dir)
-    # download_pacs(args.data_dir)
-    # download_office_home(args.data_dir)
-    # download_domain_net(args.data_dir)
-    # download_vlcs(args.data_dir)
-    # download_terra_incognita(args.data_dir)
-    download_sviro(args.data_dir)
-    # Camelyon17Dataset(root_dir=args.data_dir, download=True)
-    # FMoWDataset(root_dir=args.data_dir, download=True)
+    download_mnist(args.data_dir)
+    download_pacs(args.data_dir)
+    download_office_home(args.data_dir)
+    download_domain_net(args.data_dir)
+    download_vlcs(args.data_dir)
+    download_terra_incognita(args.data_dir)
