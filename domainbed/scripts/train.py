@@ -20,6 +20,7 @@ from domainbed import hparams_registry
 from domainbed import algorithms
 from domainbed.lib import misc
 from domainbed.lib.fast_data_loader import InfiniteDataLoader, FastDataLoader
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Domain generalization')

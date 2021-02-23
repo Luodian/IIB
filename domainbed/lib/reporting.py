@@ -14,7 +14,7 @@ def load_records(path):
     for i, subdir in tqdm.tqdm(list(enumerate(os.listdir(path))),
                                ncols=80,
                                leave=False):
-        results_path = os.path.join(path, subdir, "results.jsonl")
+        results_path = os.path.join(path, subdir, "results.json")
         try:
             with open(results_path, "r") as f:
                 for line in f:
