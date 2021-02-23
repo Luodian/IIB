@@ -46,6 +46,7 @@ if __name__ == "__main__":
     parser.add_argument('--holdout_fraction', type=float, default=0.2)
     parser.add_argument('--uda_holdout_fraction', type=float, default=0)
     parser.add_argument('--skip_model_save', action='store_true')
+    parser.add_argument('--debug_mode', action='store_true')
     parser.add_argument('--save_model_every_checkpoint', action='store_true')
     args = parser.parse_args()
 
@@ -139,11 +140,14 @@ if __name__ == "__main__":
         if len(uda):
             uda_splits.append((uda, uda_weights))
 
+    if args.debug_mode:
+        hparams['batch_size'] = 1
+
     train_loaders = [InfiniteDataLoader(
         dataset=env,
         weights=env_weights,
         batch_size=hparams['batch_size'],
-        num_workers=dataset.N_WORKERS)
+        num_workers=dataset.N_WORKERS if args.debug_mode is False else 0)
         for i, (env, env_weights) in enumerate(in_splits)
         if i not in args.test_envs]
 
@@ -151,14 +155,14 @@ if __name__ == "__main__":
         dataset=env,
         weights=env_weights,
         batch_size=hparams['batch_size'],
-        num_workers=dataset.N_WORKERS)
+        num_workers=dataset.N_WORKERS if args.debug_mode is False else 0)
         for i, (env, env_weights) in enumerate(uda_splits)
         if i in args.test_envs]
 
     eval_loaders = [FastDataLoader(
         dataset=env,
-        batch_size=64,
-        num_workers=dataset.N_WORKERS)
+        batch_size=64 if args.debug_mode is False else 1,
+        num_workers=dataset.N_WORKERS if args.debug_mode is False else 0)
         for env, _ in (in_splits + out_splits + uda_splits)]
     eval_weights = [None for _, weights in (in_splits + out_splits + uda_splits)]
     eval_loader_names = ['env{}_in'.format(i)

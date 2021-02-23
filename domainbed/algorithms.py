@@ -233,18 +233,18 @@ class IIB(ERM):
         feat_dim = self.featurizer.n_outputs
         # VIB archs
         self.encoder = torch.nn.Sequential(
-            nn.Linear(128, 256),
-            nn.BatchNorm1d(256),
+            nn.Linear(feat_dim, feat_dim),
+            nn.BatchNorm1d(feat_dim),
             nn.ReLU(inplace=True),
-            nn.Linear(256, 512),
-            nn.BatchNorm1d(512),
+            nn.Linear(feat_dim, feat_dim),
+            nn.BatchNorm1d(feat_dim),
             nn.ReLU(inplace=True)
         )
-        self.fc3_mu = nn.Linear(512, self.hparams['embedding_dim'])  # output = CNN embedding latent variables
-        self.fc3_logvar = nn.Linear(512, self.hparams['embedding_dim'])  # output = CNN embedding latent variables
+        self.fc3_mu = nn.Linear(feat_dim, feat_dim)  # output = CNN embedding latent variables
+        self.fc3_logvar = nn.Linear(feat_dim, feat_dim)  # output = CNN embedding latent variables
         # Inv Risk archs
-        self.inv_classifier = nn.Linear(self.hparams['embedding_dim'], num_classes)
-        self.env_classifier = nn.Linear(self.hparams['embedding_dim'] + 1, num_classes)
+        self.inv_classifier = nn.Linear(feat_dim, num_classes)
+        self.env_classifier = nn.Linear(feat_dim + 1, num_classes)
         self.domain_indx = [torch.full((hparams['batch_size'], 1), indx) for indx in range(num_domains)]
         self.optimizer = torch.optim.Adam(
             list(self.featurizer.parameters()) + list(self.inv_classifier.parameters()) + list(

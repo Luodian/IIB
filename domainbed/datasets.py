@@ -75,7 +75,7 @@ class Debug(MultipleDomainDataset):
 class Debug28(Debug):
     INPUT_SHAPE = (3, 28, 28)
     ENVIRONMENTS = ['0', '1', '2']
-    N_WORKERS = 4
+    N_WORKERS = 0
 
 class Debug224(Debug):
     INPUT_SHAPE = (3, 224, 224)
@@ -157,7 +157,6 @@ class ColoredMNIST(MultipleEnvironmentMNIST):
 
 class RotatedMNIST(MultipleEnvironmentMNIST):
     ENVIRONMENTS = ['0', '15', '30', '45', '60', '75']
-    N_WORKERS = 0
     def __init__(self, root, test_envs, hparams):
         super(RotatedMNIST, self).__init__(root, [0, 15, 30, 45, 60, 75],
                                            self.rotate_dataset, (1, 28, 28,), 10)
