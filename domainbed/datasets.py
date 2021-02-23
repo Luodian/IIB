@@ -218,6 +218,7 @@ class MultipleEnvironmentImageFolder(MultipleDomainDataset):
         self.num_classes = len(self.datasets[-1].classes)
 
 class VLCS(MultipleEnvironmentImageFolder):
+    N_STEPS = 10001
     CHECKPOINT_FREQ = 300
     ENVIRONMENTS = ["C", "L", "S", "V"]
     def __init__(self, root, test_envs, hparams):
@@ -225,6 +226,7 @@ class VLCS(MultipleEnvironmentImageFolder):
         super().__init__(self.dir, test_envs, hparams['data_augmentation'], hparams)
 
 class PACS(MultipleEnvironmentImageFolder):
+    N_STEPS = 10001
     CHECKPOINT_FREQ = 300
     ENVIRONMENTS = ["A", "C", "P", "S"]
     def __init__(self, root, test_envs, hparams):
@@ -232,6 +234,7 @@ class PACS(MultipleEnvironmentImageFolder):
         super().__init__(self.dir, test_envs, hparams['data_augmentation'], hparams)
 
 class DomainNet(MultipleEnvironmentImageFolder):
+    N_STEPS = 100001
     CHECKPOINT_FREQ = 1000
     ENVIRONMENTS = ["clip", "info", "paint", "quick", "real", "sketch"]
     def __init__(self, root, test_envs, hparams):

@@ -3,10 +3,14 @@ Bo: I deleted the formal README and plan to write a tutorial here so that you ca
 
 # How to start?
 ```shell
-python script/train.py
+python -m domainbed.scripts.train \
 --data_dir=/your_root_path/IIB/datasets
 --algorithm=IIB
 --dataset=RotatedMNIST
---hparams={\"lambda_inv_risks\":100,\"embedding_dim\":256}
+```
+Use this script to download all datasets
+```shell
+python -m domainbed.scripts.download \
+       --data_dir=/your_root_path/IIB/datasets
 ```
 Note that `hparams` should be in json format, and wrap all key values in double quotes with an additional slash.
