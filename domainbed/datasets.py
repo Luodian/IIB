@@ -342,7 +342,7 @@ class WILDSCamelyon(WILDSDataset):
     ENVIRONMENTS = ["hospital_0", "hospital_1", "hospital_2", "hospital_3",
             "hospital_4"]
     def __init__(self, root, test_envs, hparams):
-        dataset = Camelyon17Dataset(root_dir=root)
+        dataset = Camelyon17Dataset(root_dir=root, download=True)
         super().__init__(
             dataset, "hospital", test_envs, hparams['data_augmentation'], hparams)
         
