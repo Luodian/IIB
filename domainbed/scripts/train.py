@@ -247,7 +247,7 @@ if __name__ == "__main__":
                 'args': vars(args)
             })
 
-            epochs_path = os.path.join(args.output_dir, 'results.jsonl')
+            epochs_path = os.path.join(args.output_dir, 'results.json')
             with open(epochs_path, 'a') as f:
                 f.write(json.dumps(results, sort_keys=True) + "\n")
 

@@ -3,10 +3,12 @@
 import itertools
 import numpy as np
 
+
 def get_test_records(records):
     """Given records with a common test env, get the test records (i.e. the
     records with *only* that single test env and no other test envs)"""
     return records.filter(lambda r: len(r['args']['test_envs']) == 1)
+
 
 class SelectionMethod:
     """Abstract class whose subclasses implement strategies for model
@@ -30,14 +32,14 @@ class SelectionMethod:
         return a sorted list of (run_acc, records) tuples.
         """
         return (records.group('args.hparams_seed')
-            .map(lambda _, run_records:
-                (
-                    self.run_acc(run_records),
-                    run_records
-                )
-            ).filter(lambda x: x[0] is not None)
-            .sorted(key=lambda x: x[0]['val_acc'])[::-1]
-        )
+                    .map(lambda _, run_records:
+                         (
+                             self.run_acc(run_records),
+                             run_records
+                         )
+                         ).filter(lambda x: x[0] is not None)
+                    .sorted(key=lambda x: x[0]['val_acc'])[::-1]
+                    )
 
     @classmethod
     def sweep_acc(self, records):
@@ -51,6 +53,7 @@ class SelectionMethod:
         else:
             return None
 
+
 class OracleSelectionMethod(SelectionMethod):
     """Like Selection method which picks argmax(test_out_acc) across all hparams
     and checkpoints, but instead of taking the argmax over all
@@ -60,7 +63,7 @@ class OracleSelectionMethod(SelectionMethod):
     @classmethod
     def run_acc(self, run_records):
         run_records = run_records.filter(lambda r:
-            len(r['args']['test_envs']) == 1)
+                                         len(r['args']['test_envs']) == 1)
         if not len(run_records):
             return None
         test_env = run_records[0]['args']['test_envs'][0]
@@ -68,9 +71,10 @@ class OracleSelectionMethod(SelectionMethod):
         test_in_acc_key = 'env{}_in_acc'.format(test_env)
         chosen_record = run_records.sorted(lambda r: r['step'])[-1]
         return {
-            'val_acc':  chosen_record[test_out_acc_key],
+            'val_acc': chosen_record[test_out_acc_key],
             'test_acc': chosen_record[test_in_acc_key]
         }
+
 
 class IIDAccuracySelectionMethod(SelectionMethod):
     """Picks argmax(mean(env_out_acc for env in train_envs))"""
@@ -99,6 +103,7 @@ class IIDAccuracySelectionMethod(SelectionMethod):
             return None
         return test_records.map(self._step_acc).argmax('val_acc')
 
+
 class LeaveOneOutSelectionMethod(SelectionMethod):
     """Picks (hparams, step) by leave-one-out cross validation."""
     name = "leave-one-domain-out cross-validation"
@@ -121,10 +126,10 @@ class LeaveOneOutSelectionMethod(SelectionMethod):
         for r in records.filter(lambda r: len(r['args']['test_envs']) == 2):
             val_env = (set(r['args']['test_envs']) - set([test_env])).pop()
             val_accs[val_env] = r['env{}_in_acc'.format(val_env)]
-        val_accs = list(val_accs[:test_env]) + list(val_accs[test_env+1:])
-        if any([v==-1 for v in val_accs]):
+        val_accs = list(val_accs[:test_env]) + list(val_accs[test_env + 1:])
+        if any([v == -1 for v in val_accs]):
             return None
-        val_acc = np.sum(val_accs) / (n_envs-1)
+        val_acc = np.sum(val_accs) / (n_envs - 1)
         return {
             'val_acc': val_acc,
             'test_acc': test_records[0]['env{}_in_acc'.format(test_env)]
@@ -133,8 +138,8 @@ class LeaveOneOutSelectionMethod(SelectionMethod):
     @classmethod
     def run_acc(self, records):
         step_accs = records.group('step').map(lambda step, step_records:
-            self._step_acc(step_records)
-        ).filter_not_none()
+                                              self._step_acc(step_records)
+                                              ).filter_not_none()
         if len(step_accs):
             return step_accs.argmax('val_acc')
         else:

@@ -56,6 +56,10 @@ def _hparams(algorithm, dataset, random_seed):
         _hparam('irm_lambda', 1e2, lambda r: 10**r.uniform(-1, 5))
         _hparam('irm_penalty_anneal_iters', 500, lambda r: int(10**r.uniform(0, 4)))
 
+    elif algorithm == 'IIB':
+        _hparam('lambda_inv_risks', 1, lambda r: 10**r.uniform(-2, 2))
+        _hparam('lambda_beta', 1e-3, lambda r: 10**r.uniform(-1, 1))
+
     elif algorithm == "Mixup":
         _hparam('mixup_alpha', 0.2, lambda r: 10**r.uniform(-1, -1))
 
