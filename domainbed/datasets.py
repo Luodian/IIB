@@ -10,7 +10,7 @@ from torchvision.datasets import MNIST, ImageFolder
 from torchvision.transforms.functional import rotate
 
 from wilds.datasets.camelyon17_dataset import Camelyon17Dataset
-from wilds.datasets.fmow_dataset import FMoWDataset 
+from wilds.datasets.fmow_dataset import FMoWDataset
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
@@ -218,7 +218,7 @@ class MultipleEnvironmentImageFolder(MultipleDomainDataset):
         self.num_classes = len(self.datasets[-1].classes)
 
 class VLCS(MultipleEnvironmentImageFolder):
-    N_STEPS = 10001
+    N_STEPS = 100001
     CHECKPOINT_FREQ = 300
     ENVIRONMENTS = ["C", "L", "S", "V"]
     def __init__(self, root, test_envs, hparams):
@@ -226,7 +226,7 @@ class VLCS(MultipleEnvironmentImageFolder):
         super().__init__(self.dir, test_envs, hparams['data_augmentation'], hparams)
 
 class PACS(MultipleEnvironmentImageFolder):
-    N_STEPS = 10001
+    N_STEPS = 100001
     CHECKPOINT_FREQ = 300
     ENVIRONMENTS = ["A", "C", "P", "S"]
     def __init__(self, root, test_envs, hparams):
@@ -234,7 +234,7 @@ class PACS(MultipleEnvironmentImageFolder):
         super().__init__(self.dir, test_envs, hparams['data_augmentation'], hparams)
 
 class DomainNet(MultipleEnvironmentImageFolder):
-    N_STEPS = 100001
+    N_STEPS = 250001
     CHECKPOINT_FREQ = 1000
     ENVIRONMENTS = ["clip", "info", "paint", "quick", "real", "sketch"]
     def __init__(self, root, test_envs, hparams):
@@ -249,6 +249,7 @@ class OfficeHome(MultipleEnvironmentImageFolder):
         super().__init__(self.dir, test_envs, hparams['data_augmentation'], hparams)
 
 class TerraIncognita(MultipleEnvironmentImageFolder):
+    N_STEPS = 100001
     CHECKPOINT_FREQ = 300
     ENVIRONMENTS = ["L100", "L38", "L43", "L46"]
     def __init__(self, root, test_envs, hparams):
@@ -256,6 +257,7 @@ class TerraIncognita(MultipleEnvironmentImageFolder):
         super().__init__(self.dir, test_envs, hparams['data_augmentation'], hparams)
 
 class SVIRO(MultipleEnvironmentImageFolder):
+    N_STEPS = 100001
     CHECKPOINT_FREQ = 300
     ENVIRONMENTS = ["aclass", "escape", "hilux", "i3", "lexus", "tesla", "tiguan", "tucson", "x5", "zoe"]
     def __init__(self, root, test_envs, hparams):
