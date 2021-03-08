@@ -9,7 +9,6 @@ python -u -m domainbed.scripts.list_top_hparams \
 
 import collections
 
-
 import argparse
 import functools
 import glob
@@ -30,16 +29,17 @@ from domainbed import model_selection
 from domainbed.lib.query import Q
 import warnings
 
-def todo_rename(records, selection_method, latex):
 
+def todo_rename(records, selection_method, latex):
     grouped_records = reporting.get_grouped_records(records).map(lambda group:
-        { **group, "sweep_acc": selection_method.sweep_acc(group["records"]) }
-    ).filter(lambda g: g["sweep_acc"] is not None)
+                                                                 {**group, "sweep_acc": selection_method.sweep_acc(
+                                                                     group["records"])}
+                                                                 ).filter(lambda g: g["sweep_acc"] is not None)
 
     # read algorithm names and sort (predefined order)
     alg_names = Q(records).select("args.algorithm").unique()
     alg_names = ([n for n in algorithms.ALGORITHMS if n in alg_names] +
-        [n for n in alg_names if n not in algorithms.ALGORITHMS])
+                 [n for n in alg_names if n not in algorithms.ALGORITHMS])
 
     # read dataset names and sort (lexicographic order)
     dataset_names = Q(records).select("args.dataset").unique().sorted()
@@ -56,10 +56,10 @@ def todo_rename(records, selection_method, latex):
             means = []
             for j, test_env in enumerate(test_envs):
                 trial_accs = (grouped_records
-                    .filter_equals(
-                        "dataset, algorithm, test_env",
-                        (dataset, algorithm, test_env)
-                    ).select("sweep_acc"))
+                              .filter_equals(
+                    "dataset, algorithm, test_env",
+                    (dataset, algorithm, test_env)
+                ).select("sweep_acc"))
                 mean, err, table[i][j] = format_mean(trial_accs, latex)
                 means.append(mean)
             if None in means:
@@ -68,14 +68,14 @@ def todo_rename(records, selection_method, latex):
                 table[i][-1] = "{:.1f}".format(sum(means) / len(means))
 
         col_labels = [
-            "Algorithm", 
+            "Algorithm",
             *datasets.get_dataset_class(dataset).ENVIRONMENTS,
             "Avg"
         ]
         header_text = (f"Dataset: {dataset}, "
-            f"model selection method: {selection_method.name}")
+                       f"model selection method: {selection_method.name}")
         print_table(table, header_text, alg_names, list(col_labels),
-            colwidth=20, latex=latex)
+                    colwidth=20, latex=latex)
 
     # Print an "averages" table
     if latex:
@@ -87,12 +87,12 @@ def todo_rename(records, selection_method, latex):
         means = []
         for j, dataset in enumerate(dataset_names):
             trial_averages = (grouped_records
-                .filter_equals("algorithm, dataset", (algorithm, dataset))
-                .group("trial_seed")
-                .map(lambda trial_seed, group:
-                    group.select("sweep_acc").mean()
-                )
-            )
+                              .filter_equals("algorithm, dataset", (algorithm, dataset))
+                              .group("trial_seed")
+                              .map(lambda trial_seed, group:
+                                   group.select("sweep_acc").mean()
+                                   )
+                              )
             mean, err, table[i][j] = format_mean(trial_averages, latex)
             means.append(mean)
         if None in means:
@@ -103,7 +103,8 @@ def todo_rename(records, selection_method, latex):
     col_labels = ["Algorithm", *dataset_names, "Avg"]
     header_text = f"Averages, model selection method: {selection_method.name}"
     print_table(table, header_text, alg_names, col_labels, colwidth=25,
-        latex=latex)
+                latex=latex)
+
 
 if __name__ == "__main__":
     np.set_printoptions(suppress=True)
@@ -122,9 +123,9 @@ if __name__ == "__main__":
     records = reporting.get_grouped_records(records)
     records = records.filter(
         lambda r:
-            r['dataset'] == args.dataset and
-            r['algorithm'] == args.algorithm and
-            r['test_env'] == args.test_env
+        r['dataset'] == args.dataset and
+        r['algorithm'] == args.algorithm and
+        r['test_env'] == args.test_env
     )
 
     SELECTION_METHODS = [
@@ -142,7 +143,7 @@ if __name__ == "__main__":
             for run_acc, hparam_records in best_hparams:
                 print(f"\t{run_acc}")
                 for r in hparam_records:
-                    assert(r['hparams'] == hparam_records[0]['hparams'])
+                    assert (r['hparams'] == hparam_records[0]['hparams'])
                 print("\t\thparams:")
                 for k, v in sorted(hparam_records[0]['hparams'].items()):
                     print('\t\t\t{}: {}'.format(k, v))

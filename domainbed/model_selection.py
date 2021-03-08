@@ -31,15 +31,9 @@ class SelectionMethod:
         Given all records from a single (dataset, algorithm, test env) pair,
         return a sorted list of (run_acc, records) tuples.
         """
-        return (records.group('args.hparams_seed')
-                    .map(lambda _, run_records:
-                         (
-                             self.run_acc(run_records),
-                             run_records
-                         )
-                         ).filter(lambda x: x[0] is not None)
-                    .sorted(key=lambda x: x[0]['val_acc'])[::-1]
-                    )
+        return (
+        records.group('args.hparams_seed').map(lambda _, run_records: (self.run_acc(run_records), run_records)).filter(
+            lambda x: x[0] is not None).sorted(key=lambda x: x[0]['val_acc'])[::-1])
 
     @classmethod
     def sweep_acc(self, records):
@@ -62,8 +56,7 @@ class OracleSelectionMethod(SelectionMethod):
 
     @classmethod
     def run_acc(self, run_records):
-        run_records = run_records.filter(lambda r:
-                                         len(r['args']['test_envs']) == 1)
+        run_records = run_records.filter(lambda r: len(r['args']['test_envs']) == 1)
         if not len(run_records):
             return None
         test_env = run_records[0]['args']['test_envs'][0]
