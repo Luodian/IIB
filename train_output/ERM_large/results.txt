@@ -1,0 +1,37 @@
+Total records: 561
+
+-------- Dataset: WILDSCamelyon, model selection method: training-domain validation set
+Algorithm             hospital_0            hospital_1            hospital_2            hospital_3            hospital_4            Avg                  
+ERM                   97.3 +/- 0.0          93.4 +/- 0.0          97.1 +/- 0.0          95.9 +/- 0.0          94.6 +/- 0.0          95.7                 
+
+-------- Dataset: WILDSFMoW, model selection method: training-domain validation set
+Algorithm             region_0              region_1              region_2              region_3              region_4              region_5              Avg                  
+ERM                   33.2 +/- 0.0          43.1 +/- 0.0          32.5 +/- 0.0          40.3 +/- 0.0          49.6 +/- 0.0          54.7 +/- 0.0          42.2                 
+
+-------- Averages, model selection method: training-domain validation set
+Algorithm                  WILDSCamelyon              WILDSFMoW                  Avg                       
+ERM                        95.7 +/- 0.0               42.2 +/- 0.0               69.0                      
+
+-------- Dataset: WILDSCamelyon, model selection method: leave-one-domain-out cross-validation
+Algorithm             hospital_0            hospital_1            hospital_2            hospital_3            hospital_4            Avg                  
+ERM                   X                     X                     X                     X                     X                     X                    
+
+-------- Dataset: WILDSFMoW, model selection method: leave-one-domain-out cross-validation
+Algorithm             region_0              region_1              region_2              region_3              region_4              region_5              Avg                  
+ERM                   X                     X                     X                     X                     X                     X                     X                    
+
+-------- Averages, model selection method: leave-one-domain-out cross-validation
+Algorithm                  WILDSCamelyon              WILDSFMoW                  Avg                       
+ERM                        X                          X                          X                         
+
+-------- Dataset: WILDSCamelyon, model selection method: test-domain validation set (oracle)
+Algorithm             hospital_0            hospital_1            hospital_2            hospital_3            hospital_4            Avg                  
+ERM                   96.9 +/- 0.0          94.7 +/- 0.0          89.0 +/- 0.0          95.1 +/- 0.0          90.6 +/- 0.0          93.3                 
+
+-------- Dataset: WILDSFMoW, model selection method: test-domain validation set (oracle)
+Algorithm             region_0              region_1              region_2              region_3              region_4              region_5              Avg                  
+ERM                   30.3 +/- 0.0          41.3 +/- 0.0          32.5 +/- 0.0          40.3 +/- 0.0          48.8 +/- 0.0          46.8 +/- 0.0          40.0                 
+
+-------- Averages, model selection method: test-domain validation set (oracle)
+Algorithm                  WILDSCamelyon              WILDSFMoW                  Avg                       
+ERM                        93.3 +/- 0.0               40.0 +/- 0.0               66.6                      
