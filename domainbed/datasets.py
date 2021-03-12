@@ -18,6 +18,7 @@ DATASETS = [
     # Debug
     "Debug28",
     "Debug224",
+    "FailIRM",
     # Small images
     "ColoredMNIST",
     "RotatedMNIST",
@@ -33,6 +34,7 @@ DATASETS = [
     "WILDSFMoW"
 ]
 
+
 def get_dataset_class(dataset_name):
     """Return the dataset class with the given name."""
     if dataset_name not in globals():
@@ -45,12 +47,12 @@ def num_environments(dataset_name):
 
 
 class MultipleDomainDataset:
-    N_STEPS = 5001           # Default, subclasses may override
-    CHECKPOINT_FREQ = 100    # Default, subclasses may override
-    N_WORKERS = 8            # Default, subclasses may override
-    ENVIRONMENTS = None      # Subclasses should override
-    INPUT_SHAPE = None       # Subclasses should override
-    
+    N_STEPS = 5001  # Default, subclasses may override
+    CHECKPOINT_FREQ = 100  # Default, subclasses may override
+    N_WORKERS = 8  # Default, subclasses may override
+    ENVIRONMENTS = None  # Subclasses should override
+    INPUT_SHAPE = None  # Subclasses should override
+
     def __getitem__(self, index):
         return self.datasets[index]
 
@@ -72,10 +74,39 @@ class Debug(MultipleDomainDataset):
                 )
             )
 
+
+class FailIRM(Debug):
+    N_WORKERS = 0
+    ENVIRONMENTS = ['0', '1', '2', '3', '4']
+
+    def __init__(self, root, test_envs, hparams):
+        self.input_shape = (8,)
+        self.num_classes = 2
+        self.datasets = []
+        self.sigma = hparams['linear_sigma']
+        # Generated a fixed Z_c
+        z_c = torch.randn(1, 8)
+        z = []
+        for _, __ in enumerate(self.ENVIRONMENTS):
+            z_a = torch.randn(1, 8)
+            z.append(torch.cat([z_c, z_a]))
+
+        z = torch.stack(z)
+
+        # random sample data from choices [0, 1]
+        y = torch.randint(0, 1, (2000,))
+        for indx, __ in enumerate(self.ENVIRONMENTS):
+            self.datasets.append(
+                # Args of TensorDataset: [x, y]
+                TensorDataset(torch.randn(2000, 16) * self.sigma + y * z[indx], y)
+            )
+
+
 class Debug28(Debug):
     INPUT_SHAPE = (3, 28, 28)
     ENVIRONMENTS = ['0', '1', '2']
     N_WORKERS = 0
+
 
 class Debug224(Debug):
     INPUT_SHAPE = (3, 224, 224)
@@ -120,7 +151,7 @@ class ColoredMNIST(MultipleEnvironmentMNIST):
 
     def __init__(self, root, test_envs, hparams):
         super(ColoredMNIST, self).__init__(root, [0.1, 0.2, 0.9],
-                                         self.color_dataset, (2, 28, 28,), 2)
+                                           self.color_dataset, (2, 28, 28,), 2)
 
         self.input_shape = (2, 28, 28,)
         self.num_classes = 2
@@ -141,7 +172,7 @@ class ColoredMNIST(MultipleEnvironmentMNIST):
         images = torch.stack([images, images], dim=1)
         # Apply the color to the image by zeroing out the other color channel
         images[torch.tensor(range(len(images))), (
-            1 - colors).long(), :, :] *= 0
+                                                         1 - colors).long(), :, :] *= 0
 
         x = images.float().div_(255.0)
         y = labels.view(-1).long()
@@ -157,6 +188,7 @@ class ColoredMNIST(MultipleEnvironmentMNIST):
 
 class RotatedMNIST(MultipleEnvironmentMNIST):
     ENVIRONMENTS = ['0', '15', '30', '45', '60', '75']
+
     def __init__(self, root, test_envs, hparams):
         super(RotatedMNIST, self).__init__(root, [0, 15, 30, 45, 60, 75],
                                            self.rotate_dataset, (1, 28, 28,), 10)
@@ -176,6 +208,7 @@ class RotatedMNIST(MultipleEnvironmentMNIST):
 
         return TensorDataset(x, y)
 
+
 class MultipleEnvironmentImageFolder(MultipleDomainDataset):
     def __init__(self, root, test_envs, augment, hparams):
         super().__init__()
@@ -183,7 +216,7 @@ class MultipleEnvironmentImageFolder(MultipleDomainDataset):
         environments = sorted(environments)
 
         transform = transforms.Compose([
-            transforms.Resize((224,224)),
+            transforms.Resize((224, 224)),
             transforms.ToTensor(),
             transforms.Normalize(
                 mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -210,56 +243,68 @@ class MultipleEnvironmentImageFolder(MultipleDomainDataset):
 
             path = os.path.join(root, environment)
             env_dataset = ImageFolder(path,
-                transform=env_transform)
+                                      transform=env_transform)
 
             self.datasets.append(env_dataset)
 
         self.input_shape = (3, 224, 224,)
         self.num_classes = len(self.datasets[-1].classes)
 
+
 class VLCS(MultipleEnvironmentImageFolder):
     N_STEPS = 100001
     CHECKPOINT_FREQ = 300
     ENVIRONMENTS = ["C", "L", "S", "V"]
+
     def __init__(self, root, test_envs, hparams):
         self.dir = os.path.join(root, "VLCS/")
         super().__init__(self.dir, test_envs, hparams['data_augmentation'], hparams)
+
 
 class PACS(MultipleEnvironmentImageFolder):
     N_STEPS = 100001
     CHECKPOINT_FREQ = 300
     ENVIRONMENTS = ["A", "C", "P", "S"]
+
     def __init__(self, root, test_envs, hparams):
         self.dir = os.path.join(root, "PACS/")
         super().__init__(self.dir, test_envs, hparams['data_augmentation'], hparams)
+
 
 class DomainNet(MultipleEnvironmentImageFolder):
     N_STEPS = 250001
     CHECKPOINT_FREQ = 1000
     ENVIRONMENTS = ["clip", "info", "paint", "quick", "real", "sketch"]
+
     def __init__(self, root, test_envs, hparams):
         self.dir = os.path.join(root, "domain_net/")
         super().__init__(self.dir, test_envs, hparams['data_augmentation'], hparams)
 
+
 class OfficeHome(MultipleEnvironmentImageFolder):
     CHECKPOINT_FREQ = 300
     ENVIRONMENTS = ["A", "C", "P", "R"]
+
     def __init__(self, root, test_envs, hparams):
         self.dir = os.path.join(root, "office_home/")
         super().__init__(self.dir, test_envs, hparams['data_augmentation'], hparams)
+
 
 class TerraIncognita(MultipleEnvironmentImageFolder):
     N_STEPS = 100001
     CHECKPOINT_FREQ = 300
     ENVIRONMENTS = ["L100", "L38", "L43", "L46"]
+
     def __init__(self, root, test_envs, hparams):
         self.dir = os.path.join(root, "terra_incognita/")
         super().__init__(self.dir, test_envs, hparams['data_augmentation'], hparams)
+
 
 class SVIRO(MultipleEnvironmentImageFolder):
     N_STEPS = 100001
     CHECKPOINT_FREQ = 300
     ENVIRONMENTS = ["aclass", "escape", "hilux", "i3", "lexus", "tesla", "tiguan", "tucson", "x5", "zoe"]
+
     def __init__(self, root, test_envs, hparams):
         self.dir = os.path.join(root, "sviro/")
         super().__init__(self.dir, test_envs, hparams['data_augmentation'], hparams)
@@ -299,6 +344,7 @@ class WILDSEnvironment:
 
 class WILDSDataset(MultipleDomainDataset):
     INPUT_SHAPE = (3, 224, 224)
+
     def __init__(self, dataset, metadata_name, test_envs, augment, hparams):
         super().__init__()
 
@@ -321,7 +367,7 @@ class WILDSDataset(MultipleDomainDataset):
         ])
 
         self.datasets = []
-        
+
         for i, metadata_value in enumerate(
                 self.metadata_values(dataset, metadata_name)):
             if augment and (i not in test_envs):
@@ -345,19 +391,22 @@ class WILDSDataset(MultipleDomainDataset):
 
 class WILDSCamelyon(WILDSDataset):
     ENVIRONMENTS = ["hospital_0", "hospital_1", "hospital_2", "hospital_3",
-            "hospital_4"]
+                    "hospital_4"]
+
     def __init__(self, root, test_envs, hparams):
         dataset = Camelyon17Dataset(root_dir=root, download=True)
         super().__init__(
             dataset, "hospital", test_envs, hparams['data_augmentation'], hparams)
-        
+
 
 class WILDSFMoW(WILDSDataset):
-    ENVIRONMENTS = [ "region_0", "region_1", "region_2", "region_3",
-            "region_4", "region_5"]
+    ENVIRONMENTS = ["region_0", "region_1", "region_2", "region_3",
+                    "region_4", "region_5"]
+
     def __init__(self, root, test_envs, hparams):
         dataset = FMoWDataset(root_dir=root, download=True)
         super().__init__(
             dataset, "region", test_envs, hparams['data_augmentation'], hparams)
+
 
 dataset = WILDSFMoW("/rscratch/luodian_libo/DomainBed/datasets", [0], {"data_augmentation": True})
