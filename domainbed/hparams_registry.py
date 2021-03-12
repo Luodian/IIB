@@ -85,6 +85,8 @@ def _hparams(algorithm, dataset, random_seed):
 
     # Dataset-and-algorithm-specific hparam definitions. Each block of code
     # below corresponds to exactly one hparam. Avoid nested conditionals.
+    if dataset == "FailIRM":
+        _hparam('linear_sigma', 1., lambda r: 1.)
 
     if dataset in SMALL_IMAGES:
         _hparam('lr', 1e-3, lambda r: 10**r.uniform(-4.5, -2.5))

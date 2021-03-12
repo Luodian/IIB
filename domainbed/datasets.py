@@ -76,7 +76,6 @@ class Debug(MultipleDomainDataset):
 
 
 class FailIRM(Debug):
-    N_WORKERS = 0
     ENVIRONMENTS = ['0', '1', '2', '3', '4']
 
     def __init__(self, root, test_envs, hparams):
@@ -89,16 +88,16 @@ class FailIRM(Debug):
         z = []
         for _, __ in enumerate(self.ENVIRONMENTS):
             z_a = torch.randn(1, 8)
-            z.append(torch.cat([z_c, z_a]))
+            z.append(torch.squeeze(torch.cat([z_c, z_a], 1), 0))
 
         z = torch.stack(z)
 
         # random sample data from choices [0, 1]
-        y = torch.randint(0, 1, (2000,))
+        y = torch.randint(0, 2, (5, 2000, 1))
         for indx, __ in enumerate(self.ENVIRONMENTS):
             self.datasets.append(
                 # Args of TensorDataset: [x, y]
-                TensorDataset(torch.randn(2000, 16) * self.sigma + y * z[indx], y)
+                TensorDataset(torch.randn(2000, 16) * self.sigma + y[indx] * z[indx], y[indx])
             )
 
 
