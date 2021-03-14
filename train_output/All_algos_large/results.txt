@@ -1,4 +1,4 @@
-Total records: 2941
+Total records: 3555
 
 -------- Dataset: WILDSCamelyon, model selection method: training-domain validation set
 Algorithm             hospital_0            hospital_1            hospital_2            hospital_3            hospital_4            Avg                  
@@ -23,11 +23,11 @@ SD                    X                     X                     X             
 Algorithm             region_0              region_1              region_2              region_3              region_4              region_5              Avg                  
 ERM                   X                     X                     X                     X                     X                     X                     X                    
 IRM                   X                     X                     X                     X                     X                     X                     X                    
-GroupDRO              X                     X                     35.0 +/- 0.0          42.1 +/- 0.0          X                     X                     X                    
+GroupDRO              X                     32.1 +/- 0.0          35.0 +/- 0.0          42.1 +/- 0.0          X                     X                     X                    
 Mixup                 X                     X                     X                     X                     X                     X                     X                    
-MLDG                  X                     X                     X                     X                     X                     X                     X                    
+MLDG                  X                     X                     X                     X                     X                     42.8 +/- 0.0          X                    
 CORAL                 X                     X                     X                     X                     X                     X                     X                    
-MMD                   X                     X                     X                     X                     X                     X                     X                    
+MMD                   30.4 +/- 0.0          X                     X                     X                     X                     X                     X                    
 IIB                   X                     X                     X                     X                     16.4 +/- 2.3          X                     X                    
 DANN                  X                     X                     X                     X                     X                     X                     X                    
 CDANN                 X                     X                     19.3 +/- 0.0          X                     X                     28.4 +/- 0.0          X                    
@@ -42,11 +42,11 @@ SD                    X                     X                     X             
 Algorithm                  WILDSCamelyon              WILDSFMoW                  Avg                       
 ERM                        96.4 +/- 0.0               X                          X                         
 IRM                        X                          X                          X                         
-GroupDRO                   95.6 +/- 0.0               38.6 +/- 0.0               67.1                      
+GroupDRO                   95.6 +/- 0.0               35.3 +/- 2.3               65.5                      
 Mixup                      X                          X                          X                         
-MLDG                       94.1 +/- 0.0               X                          X                         
+MLDG                       94.1 +/- 0.0               42.8 +/- 0.0               68.5                      
 CORAL                      94.8 +/- 0.0               X                          X                         
-MMD                        X                          X                          X                         
+MMD                        X                          30.4 +/- 0.0               X                         
 IIB                        X                          16.4 +/- 2.3               X                         
 DANN                       93.1 +/- 0.0               X                          X                         
 CDANN                      86.8 +/- 0.0               23.8 +/- 3.2               55.3                      
@@ -118,7 +118,7 @@ SD                         X                          X                         
 Algorithm             hospital_0            hospital_1            hospital_2            hospital_3            hospital_4            Avg                  
 ERM                   X                     X                     96.1 +/- 0.0          X                     X                     X                    
 IRM                   X                     X                     X                     X                     X                     X                    
-GroupDRO              X                     X                     X                     93.8 +/- 0.0          X                     X                    
+GroupDRO              X                     X                     X                     91.6 +/- 0.0          X                     X                    
 Mixup                 X                     X                     X                     X                     X                     X                    
 MLDG                  X                     94.1 +/- 0.0          X                     X                     X                     X                    
 CORAL                 X                     X                     X                     X                     94.8 +/- 0.0          X                    
@@ -137,11 +137,11 @@ SD                    X                     X                     X             
 Algorithm             region_0              region_1              region_2              region_3              region_4              region_5              Avg                  
 ERM                   X                     X                     X                     X                     X                     X                     X                    
 IRM                   X                     X                     X                     X                     X                     X                     X                    
-GroupDRO              X                     X                     33.7 +/- 0.0          39.8 +/- 0.0          X                     X                     X                    
+GroupDRO              X                     32.1 +/- 0.0          33.7 +/- 0.0          39.8 +/- 0.0          X                     X                     X                    
 Mixup                 X                     X                     X                     X                     X                     X                     X                    
-MLDG                  X                     X                     X                     X                     X                     X                     X                    
+MLDG                  X                     X                     X                     X                     X                     33.8 +/- 0.0          X                    
 CORAL                 X                     X                     X                     X                     X                     X                     X                    
-MMD                   X                     X                     X                     X                     X                     X                     X                    
+MMD                   30.4 +/- 0.0          X                     X                     X                     X                     X                     X                    
 IIB                   X                     X                     X                     X                     16.0 +/- 2.0          X                     X                    
 DANN                  X                     X                     X                     X                     X                     X                     X                    
 CDANN                 X                     X                     9.7 +/- 0.0           X                     X                     34.3 +/- 0.0          X                    
@@ -156,11 +156,11 @@ SD                    X                     X                     X             
 Algorithm                  WILDSCamelyon              WILDSFMoW                  Avg                       
 ERM                        96.1 +/- 0.0               X                          X                         
 IRM                        X                          X                          X                         
-GroupDRO                   93.8 +/- 0.0               36.7 +/- 0.0               65.3                      
+GroupDRO                   91.6 +/- 0.0               34.4 +/- 1.6               63.0                      
 Mixup                      X                          X                          X                         
-MLDG                       94.1 +/- 0.0               X                          X                         
+MLDG                       94.1 +/- 0.0               33.8 +/- 0.0               64.0                      
 CORAL                      94.8 +/- 0.0               X                          X                         
-MMD                        X                          X                          X                         
+MMD                        X                          30.4 +/- 0.0               X                         
 IIB                        X                          16.0 +/- 2.0               X                         
 DANN                       50.0 +/- 0.0               X                          X                         
 CDANN                      49.6 +/- 0.0               22.0 +/- 8.7               35.8                      
