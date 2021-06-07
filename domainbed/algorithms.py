@@ -1219,7 +1219,8 @@ class SelfReg(ERM):
 
 class SANDMask(ERM):
     """
-    TODO add link arxiv 
+    SAND-mask: An Enhanced Gradient Masking Strategy for the Discovery of Invariances in Domain Generalization
+    <https://arxiv.org/abs/2106.02266>
     """
 
     def __init__(self, input_shape, num_classes, num_domains, hparams):
@@ -1250,8 +1251,6 @@ class SANDMask(ERM):
 
             env_loss = F.cross_entropy(logits, y)
             total_loss += env_loss
-
-            # TODO
             env_grads = autograd.grad(env_loss, self.network.parameters(), retain_graph=True)
             for grads, env_grad in zip(param_gradients, env_grads):
                 grads.append(env_grad)
@@ -1259,7 +1258,7 @@ class SANDMask(ERM):
         mean_loss = total_loss / len(minibatches)
 
         self.optimizer.zero_grad()
-        # TODO
+        # gradient masking applied here
         self.mask_grads(param_gradients, self.network.parameters())
         self.optimizer.step()
         self.update_count += 1
@@ -1268,7 +1267,8 @@ class SANDMask(ERM):
 
     def mask_grads(self, gradients, params):
         '''
-        TODO
+        Here a mask with continuous values in the range [0,1] is formed to control the amount of update for each
+        parameter based on the agreement of gradients coming from different environments.
         '''
         device = gradients[0][0].device
         for param, grads in zip(params, gradients):
