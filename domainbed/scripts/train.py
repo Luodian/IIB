@@ -21,33 +21,37 @@ from domainbed import algorithms
 from domainbed.lib import misc
 from domainbed.lib.fast_data_loader import InfiniteDataLoader, FastDataLoader
 
+torch.multiprocessing.set_sharing_strategy('file_system')
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Domain generalization')
     parser.add_argument('--data_dir', type=str)
     parser.add_argument('--dataset', type=str, default="RotatedMNIST")
     parser.add_argument('--algorithm', type=str, default="ERM")
     parser.add_argument('--task', type=str, default="domain_generalization",
-        choices=["domain_generalization", "domain_adaptation"])
+                        help='domain_generalization | domain_adaptation')
     parser.add_argument('--hparams', type=str,
-        help='JSON-serialized hparams dict')
+                        help='JSON-serialized hparams dict')
+    parser.add_argument('--hparams_path', type=str,
+                        help='JSON-serialized hparams dict')
     parser.add_argument('--hparams_seed', type=int, default=0,
-        help='Seed for random hparams (0 means "default hparams")')
+                        help='Seed for random hparams (0 means "default hparams")')
     parser.add_argument('--trial_seed', type=int, default=0,
-        help='Trial number (used for seeding split_dataset and '
-        'random_hparams).')
+                        help='Trial number (used for seeding split_dataset and '
+                             'random_hparams).')
     parser.add_argument('--seed', type=int, default=0,
-        help='Seed for everything else')
+                        help='Seed for everything else')
     parser.add_argument('--steps', type=int, default=None,
-        help='Number of steps. Default is dataset-dependent.')
+                        help='Number of steps. Default is dataset-dependent.')
     parser.add_argument('--checkpoint_freq', type=int, default=None,
-        help='Checkpoint every N steps. Default is dataset-dependent.')
+                        help='Checkpoint every N steps. Default is dataset-dependent.')
     parser.add_argument('--test_envs', type=int, nargs='+', default=[0])
     parser.add_argument('--output_dir', type=str, default="train_output")
     parser.add_argument('--holdout_fraction', type=float, default=0.2)
-    parser.add_argument('--uda_holdout_fraction', type=float, default=0,
-        help="For domain adaptation, % of test to use unlabeled for training.")
+    parser.add_argument('--uda_holdout_fraction', type=float, default=0)
     parser.add_argument('--skip_model_save', action='store_true')
     parser.add_argument('--save_model_every_checkpoint', action='store_true')
+    parser.add_argument("--test_val", action="store_true")
     args = parser.parse_args()
 
     # If we ever want to implement checkpointing, just persist these values
@@ -76,9 +80,13 @@ if __name__ == "__main__":
         hparams = hparams_registry.default_hparams(args.algorithm, args.dataset)
     else:
         hparams = hparams_registry.random_hparams(args.algorithm, args.dataset,
-            misc.seed_hash(args.hparams_seed, args.trial_seed))
+                                                  misc.seed_hash(args.hparams_seed, args.trial_seed))
     if args.hparams:
         hparams.update(json.loads(args.hparams))
+
+    if args.hparams_path:
+        with open(args.hparams_path, 'r') as fp:
+            hparams.update(json.load(fp))
 
     print('HParams:')
     for k, v in sorted(hparams.items()):
@@ -97,7 +105,7 @@ if __name__ == "__main__":
 
     if args.dataset in vars(datasets):
         dataset = vars(datasets)[args.dataset](args.data_dir,
-            args.test_envs, hparams)
+                                               args.test_envs, hparams)
     else:
         raise NotImplementedError
 
@@ -120,13 +128,13 @@ if __name__ == "__main__":
         uda = []
 
         out, in_ = misc.split_dataset(env,
-            int(len(env)*args.holdout_fraction),
-            misc.seed_hash(args.trial_seed, env_i))
+                                      int(len(env) * args.holdout_fraction),
+                                      misc.seed_hash(args.trial_seed, env_i))
 
         if env_i in args.test_envs:
             uda, in_ = misc.split_dataset(in_,
-                int(len(in_)*args.uda_holdout_fraction),
-                misc.seed_hash(args.trial_seed, env_i))
+                                          int(len(in_) * args.uda_holdout_fraction),
+                                          misc.seed_hash(args.trial_seed, env_i))
 
         if hparams['class_balanced']:
             in_weights = misc.make_weights_for_balanced_classes(in_)
@@ -139,9 +147,6 @@ if __name__ == "__main__":
         out_splits.append((out, out_weights))
         if len(uda):
             uda_splits.append((uda, uda_weights))
-
-    if args.task == "domain_adaptation" and len(uda_splits) == 0:
-        raise ValueError("Not enough unlabeled samples for domain adaptation.")
 
     train_loaders = [InfiniteDataLoader(
         dataset=env,
@@ -166,15 +171,15 @@ if __name__ == "__main__":
         for env, _ in (in_splits + out_splits + uda_splits)]
     eval_weights = [None for _, weights in (in_splits + out_splits + uda_splits)]
     eval_loader_names = ['env{}_in'.format(i)
-        for i in range(len(in_splits))]
+                         for i in range(len(in_splits))]
     eval_loader_names += ['env{}_out'.format(i)
-        for i in range(len(out_splits))]
+                          for i in range(len(out_splits))]
     eval_loader_names += ['env{}_uda'.format(i)
-        for i in range(len(uda_splits))]
+                          for i in range(len(uda_splits))]
 
     algorithm_class = algorithms.get_algorithm_class(args.algorithm)
     algorithm = algorithm_class(dataset.input_shape, dataset.num_classes,
-        len(dataset) - len(args.test_envs), hparams)
+                                len(dataset) - len(args.test_envs), hparams)
 
     if algorithm_dict is not None:
         algorithm.load_state_dict(algorithm_dict)
@@ -185,33 +190,37 @@ if __name__ == "__main__":
     uda_minibatches_iterator = zip(*uda_loaders)
     checkpoint_vals = collections.defaultdict(lambda: [])
 
-    steps_per_epoch = min([len(env)/hparams['batch_size'] for env,_ in in_splits])
+    steps_per_epoch = min([len(env) / hparams['batch_size'] for env, _ in in_splits])
 
     n_steps = args.steps or dataset.N_STEPS
     checkpoint_freq = args.checkpoint_freq or dataset.CHECKPOINT_FREQ
 
-    def save_checkpoint(filename):
-        if args.skip_model_save:
-            return
-        save_dict = {
-            "args": vars(args),
-            "model_input_shape": dataset.input_shape,
-            "model_num_classes": dataset.num_classes,
-            "model_num_domains": len(dataset) - len(args.test_envs),
-            "model_hparams": hparams,
-            "model_dict": algorithm.cpu().state_dict()
-        }
-        torch.save(save_dict, os.path.join(args.output_dir, filename))
 
+    def save_checkpoint(filename):
+        return
+        # if args.skip_model_save:
+        #     return
+        # save_dict = {
+        #     "args": vars(args),
+        #     "model_input_shape": dataset.input_shape,
+        #     "model_num_classes": dataset.num_classes,
+        #     "model_num_domains": len(dataset) - len(args.test_envs),
+        #     "model_hparams": hparams,
+        #     "model_dict": algorithm.cpu().state_dict()
+        # }
+        # torch.save(save_dict, os.path.join(args.output_dir, filename))
+
+    best_val_acc = 0.
+    best_test_acc = 0.
 
     last_results_keys = None
     for step in range(start_step, n_steps):
         step_start_time = time.time()
         minibatches_device = [(x.to(device), y.to(device))
-            for x,y in next(train_minibatches_iterator)]
+                              for x, y in next(train_minibatches_iterator)]
         if args.task == "domain_adaptation":
             uda_device = [x.to(device)
-                for x,_ in next(uda_minibatches_iterator)]
+                          for x, _ in next(uda_minibatches_iterator)]
         else:
             uda_device = None
         step_vals = algorithm.update(minibatches_device, uda_device)
@@ -230,23 +239,44 @@ if __name__ == "__main__":
                 results[key] = np.mean(val)
 
             evals = zip(eval_loader_names, eval_loaders, eval_weights)
+            val_acc = []
+            train_acc = []
             for name, loader, weights in evals:
                 acc = misc.accuracy(algorithm, loader, weights, device)
-                results[name+'_acc'] = acc
+                results[name + '_acc'] = acc
+                # for eval pick
+                if name in ["env{}_out".format(i) for i, (env, _) in enumerate(in_splits) if i not in args.test_envs]:
+                    val_acc.append(acc)
+                if name in ["env{}_in".format(i) for i, (env, _) in enumerate(in_splits) if i not in args.test_envs]:
+                    train_acc.append(acc)
+
+            if args.test_val:
+                val_acc = [results["env{}_out_acc".format(i)] for i in args.test_envs]
+                val_acc = sum(val_acc) / len(val_acc)
+            else:
+                val_acc = sum(val_acc) / len(val_acc)
+            train_acc = sum(train_acc) / len(train_acc)
+            if val_acc > best_val_acc:
+                best_val_acc = val_acc
+                best_val_train_acc = train_acc
+                best_iter = step
+                best_test_acc = [results["env{}_in_acc".format(i)] for i in args.test_envs]
+                best_test_acc = sum(best_test_acc) / len(best_test_acc)
+            results['val_acc'] = val_acc
+            results['train_acc'] = train_acc
 
             results_keys = sorted(results.keys())
             if results_keys != last_results_keys:
                 misc.print_row(results_keys, colwidth=12)
                 last_results_keys = results_keys
-            misc.print_row([results[key] for key in results_keys],
-                colwidth=12)
+            misc.print_row([results[key] for key in results_keys], colwidth=12)
 
             results.update({
                 'hparams': hparams,
                 'args': vars(args)
             })
 
-            epochs_path = os.path.join(args.output_dir, 'results.jsonl')
+            epochs_path = os.path.join(args.output_dir, 'results.json')
             with open(epochs_path, 'a') as f:
                 f.write(json.dumps(results, sort_keys=True) + "\n")
 

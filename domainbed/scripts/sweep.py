@@ -96,7 +96,7 @@ def all_test_env_combinations(n):
             yield [i, j]
 
 def make_args_list(n_trials, dataset_names, algorithms, n_hparams_from, n_hparams, steps,
-    data_dir, task, holdout_fraction, single_test_envs, hparams):
+    data_dir, task, holdout_fraction, single_test_envs, hparams, hparams_path):
     args_list = []
     for trial_seed in range(n_trials):
         for dataset in dataset_names:
@@ -124,6 +124,8 @@ def make_args_list(n_trials, dataset_names, algorithms, n_hparams_from, n_hparam
                             train_args['steps'] = steps
                         if hparams is not None:
                             train_args['hparams'] = hparams
+                        if hparams_path is not None:
+                            train_args['hparams_path'] = hparams_path
                         args_list.append(train_args)
     return args_list
 
@@ -150,6 +152,7 @@ if __name__ == "__main__":
     parser.add_argument('--command_launcher', type=str, required=True)
     parser.add_argument('--steps', type=int, default=None)
     parser.add_argument('--hparams', type=str, default=None)
+    parser.add_argument('--hparams_path', type=str, default=None)
     parser.add_argument('--holdout_fraction', type=float, default=0.2)
     parser.add_argument('--single_test_envs', action='store_true')
     parser.add_argument('--skip_confirmation', action='store_true')
@@ -166,13 +169,15 @@ if __name__ == "__main__":
         task=args.task,
         holdout_fraction=args.holdout_fraction,
         single_test_envs=args.single_test_envs,
-        hparams=args.hparams
+        hparams=args.hparams,
+        hparams_path=args.hparams_path
     )
 
     jobs = [Job(train_args, args.output_dir) for train_args in args_list]
 
     for job in jobs:
         print(job)
+
     print("{} jobs: {} done, {} incomplete, {} not launched.".format(
         len(jobs),
         len([j for j in jobs if j.state == Job.DONE]),
@@ -194,3 +199,5 @@ if __name__ == "__main__":
         if not args.skip_confirmation:
             ask_for_confirmation()
         Job.delete(to_delete)
+
+# python -m domainbed.scripts.sweep launch --data_dir=/home/v-boli4/teamdrive/data --algorithms IIB --datasets VLCS --output_dir=/home/v-boli4/teamdrive/users/drluodian/IIB/train_output/test --command_launcher local --single_test_envs
