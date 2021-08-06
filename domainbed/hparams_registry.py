@@ -33,8 +33,8 @@ def _hparams(algorithm, dataset, random_seed):
     _hparam('resnet_dropout', 0., lambda r: r.choice([0., 0.1, 0.5]))
     _hparam('class_balanced', False, lambda r: False)
     # TODO: nonlinear classifiers disabled
-    _hparam('nonlinear_classifier', False,
-            lambda r: bool(r.choice([False, False])))
+    _hparam('nonlinear_classifier', True,
+            lambda r: bool(r.choice([True, True])))
 
     # Algorithm-specific hparam definitions. Each block of code below
     # corresponds to exactly one algorithm.

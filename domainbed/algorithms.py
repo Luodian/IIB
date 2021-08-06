@@ -178,18 +178,32 @@ class LIRR(ERM):
 
     def __init__(self, input_shape, num_classes, num_domains, hparams):
         super(LIRR, self).__init__(input_shape, num_classes, num_domains, hparams)
-        feat_dim = self.featurizer.n_outputs
         # Inv Risk archs
-        self.inv_classifier = nn.Linear(feat_dim, num_classes)
-        self.env_classifier = nn.Linear(feat_dim + 1, num_classes)
+        self.inv_classifier = networks.Classifier(self.featurizer.n_outputs, num_classes,
+                                                  self.hparams['nonlinear_classifier'])
+        self.env_classifier = networks.Classifier(self.featurizer.n_outputs + 1, num_classes,
+                                                  self.hparams['nonlinear_classifier'])
         self.domain_indx = [torch.full((hparams['batch_size'], 1), indx) for indx in range(num_domains)]
-        self.optimizer = torch.optim.Adam(
-            list(self.featurizer.parameters()) + list(self.inv_classifier.parameters()) + list(
-                self.env_classifier.parameters()) + list(self.encoder.parameters()) + list(
-                self.fc3_mu.parameters()) + list(self.fc3_logvar.parameters()),
-            lr=self.hparams["lr"],
-            weight_decay=self.hparams['weight_decay']
-        )
+        self.discriminator = networks.MLP(self.featurizer.n_outputs,
+                                          num_domains, self.hparams)
+        self.class_embeddings = nn.Embedding(num_classes,
+                                             self.featurizer.n_outputs)
+
+        # Optimizers
+        self.disc_opt = torch.optim.Adam(
+            (list(self.discriminator.parameters()) +
+             list(self.class_embeddings.parameters())),
+            lr=self.hparams["lr_d"],
+            weight_decay=self.hparams['weight_decay_d'],
+            betas=(self.hparams['beta1'], 0.9))
+
+        self.gen_opt = torch.optim.Adam(
+            (list(self.featurizer.parameters()) +
+             list(self.inv_classifier.parameters()),
+             self.env_classifier.parameters()),
+            lr=self.hparams["lr_g"],
+            weight_decay=self.hparams['weight_decay_g'],
+            betas=(self.hparams['beta1'], 0.9))
 
     def update(self, minibatches, unlabeled=None):
         device = "cuda" if minibatches[0][0].is_cuda else "cpu"
@@ -202,7 +216,6 @@ class LIRR(ERM):
 
         # use beta to balance the info loss.
         total_loss = inv_loss + env_loss + self.hparams['lambda_inv_risks'] * (inv_loss - env_loss) ** 2
-        # or (inv_loss - env_loss) ** 2
         self.optimizer.zero_grad()
         total_loss.backward()
         self.optimizer.step()
@@ -210,8 +223,6 @@ class LIRR(ERM):
 
     def predict(self, x):
         z = self.featurizer(x)
-        mu, logvar = self.encoder_fun(z)
-        z = self.reparameterize(mu, logvar)
         y = self.inv_classifier(z)
         return y
 
