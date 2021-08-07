@@ -176,8 +176,9 @@ class Fish(Algorithm):
 class LIRR(ERM):
     """Invariant Information Bottleneck"""
 
-    def __init__(self, input_shape, num_classes, num_domains, hparams):
+    def __init__(self, input_shape, num_classes, num_domains, hparams, conditional=False, class_balance=False):
         super(LIRR, self).__init__(input_shape, num_classes, num_domains, hparams)
+        self.register_buffer('update_count', torch.tensor([0]))
         # Inv Risk archs
         self.inv_classifier = networks.Classifier(self.featurizer.n_outputs, num_classes,
                                                   self.hparams['nonlinear_classifier'])
@@ -189,6 +190,8 @@ class LIRR(ERM):
         self.class_embeddings = nn.Embedding(num_classes,
                                              self.featurizer.n_outputs)
 
+        self.conditional = conditional
+        self.class_balance = class_balance
         # Optimizers
         self.disc_opt = torch.optim.Adam(
             (list(self.discriminator.parameters()) +
@@ -199,27 +202,61 @@ class LIRR(ERM):
 
         self.gen_opt = torch.optim.Adam(
             (list(self.featurizer.parameters()) +
-             list(self.inv_classifier.parameters()),
-             self.env_classifier.parameters()),
+             list(self.inv_classifier.parameters()) +
+             list(self.env_classifier.parameters())),
             lr=self.hparams["lr_g"],
             weight_decay=self.hparams['weight_decay_g'],
             betas=(self.hparams['beta1'], 0.9))
 
     def update(self, minibatches, unlabeled=None):
+        self.update_count += 1
         device = "cuda" if minibatches[0][0].is_cuda else "cpu"
         all_x = torch.cat([x for x, y in minibatches])
         all_y = torch.cat([y for x, y in minibatches])
         embeddings = torch.cat([curr_dom_embed for curr_dom_embed in self.domain_indx]).to(device)
         all_z = self.featurizer(all_x)
-        inv_loss = F.cross_entropy(self.inv_classifier(all_z), all_y)
-        env_loss = F.cross_entropy(self.env_classifier(torch.cat([all_z, embeddings], 1)), all_y)
 
-        # use beta to balance the info loss.
-        total_loss = inv_loss + env_loss + self.hparams['lambda_inv_risks'] * (inv_loss - env_loss) ** 2
-        self.optimizer.zero_grad()
-        total_loss.backward()
-        self.optimizer.step()
-        return {'loss_env': env_loss.item(), 'loss_inv': inv_loss.item(), 'loss_all': total_loss.item()}
+        if self.conditional:
+            disc_input = all_z + self.class_embeddings(all_y)
+        else:
+            disc_input = all_z
+        disc_out = self.discriminator(disc_input)
+        disc_labels = torch.cat([
+            torch.full((x.shape[0],), i, dtype=torch.int64, device=device)
+            for i, (x, y) in enumerate(minibatches)
+        ])
+
+        if self.class_balance:
+            y_counts = F.one_hot(all_y).sum(dim=0)
+            weights = 1. / (y_counts[all_y] * y_counts.shape[0]).float()
+            disc_loss = F.cross_entropy(disc_out, disc_labels, reduction='none')
+            disc_loss = (weights * disc_loss).sum()
+        else:
+            disc_loss = F.cross_entropy(disc_out, disc_labels)
+
+        disc_softmax = F.softmax(disc_out, dim=1)
+        input_grad = autograd.grad(disc_softmax[:, disc_labels].sum(),
+                                   [disc_input], create_graph=True)[0]
+        grad_penalty = (input_grad ** 2).sum(dim=1).mean(dim=0)
+        disc_loss += self.hparams['grad_penalty'] * grad_penalty
+
+        d_steps_per_g = self.hparams['d_steps_per_g_step']
+
+        if (self.update_count.item() % (1 + d_steps_per_g) < d_steps_per_g):
+            self.disc_opt.zero_grad()
+            disc_loss.backward()
+            self.disc_opt.step()
+            return {'disc_loss': disc_loss.item()}
+        else:
+            inv_loss = F.cross_entropy(self.inv_classifier(all_z), all_y)
+            env_loss = F.cross_entropy(self.env_classifier(torch.cat([all_z, embeddings], 1)), all_y)
+            total_loss = inv_loss + env_loss + self.hparams['lambda_inv_risks'] * (inv_loss - env_loss) ** 2
+            gen_loss = (total_loss + (self.hparams['lambda'] * -disc_loss))
+            self.disc_opt.zero_grad()
+            self.gen_opt.zero_grad()
+            gen_loss.backward()
+            self.gen_opt.step()
+            return {'gen_loss': gen_loss.item()}
 
     def predict(self, x):
         z = self.featurizer(x)
