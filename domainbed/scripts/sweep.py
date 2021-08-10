@@ -27,6 +27,7 @@ from domainbed import command_launchers
 import tqdm
 import shlex
 
+
 class Job:
     NOT_LAUNCHED = 'Not launched'
     INCOMPLETE = 'Incomplete'
@@ -57,9 +58,9 @@ class Job:
 
     def __str__(self):
         job_info = (self.train_args['dataset'],
-            self.train_args['algorithm'],
-            self.train_args['test_envs'],
-            self.train_args['hparams_seed'])
+                    self.train_args['algorithm'],
+                    self.train_args['test_envs'],
+                    self.train_args['hparams_seed'])
         return '{}: {} {}'.format(
             self.state,
             self.output_dir,
@@ -84,19 +85,21 @@ class Job:
             shutil.rmtree(job.output_dir)
         print(f'Deleted {len(jobs)} jobs!')
 
+
 def all_test_env_combinations(n):
     """
     For a dataset with n >= 3 envs, return all combinations of 1 and 2 test
     envs.
     """
-    assert(n >= 3)
+    assert (n >= 3)
     for i in range(n):
         yield [i]
-        for j in range(i+1, n):
+        for j in range(i + 1, n):
             yield [i, j]
 
+
 def make_args_list(n_trials, dataset_names, algorithms, n_hparams_from, n_hparams, steps,
-    data_dir, task, holdout_fraction, single_test_envs, hparams, hparams_path):
+                   data_dir, task, holdout_fraction, single_test_envs, hparams, hparams_path):
     args_list = []
     for trial_seed in range(n_trials):
         for dataset in dataset_names:
@@ -119,7 +122,7 @@ def make_args_list(n_trials, dataset_names, algorithms, n_hparams_from, n_hparam
                         train_args['task'] = task
                         train_args['trial_seed'] = trial_seed
                         train_args['seed'] = misc.seed_hash(dataset,
-                            algorithm, test_envs, hparams_seed, trial_seed)
+                                                            algorithm, test_envs, hparams_seed, trial_seed)
                         if steps is not None:
                             train_args['steps'] = steps
                         if hparams is not None:
@@ -129,11 +132,13 @@ def make_args_list(n_trials, dataset_names, algorithms, n_hparams_from, n_hparam
                         args_list.append(train_args)
     return args_list
 
+
 def ask_for_confirmation():
     response = input('Are you sure? (y/n) ')
     if not response.lower().strip()[:1] == "y":
         print('Nevermind!')
         exit(0)
+
 
 DATASETS = [d for d in datasets.DATASETS if "Debug" not in d]
 
@@ -144,7 +149,7 @@ if __name__ == "__main__":
     parser.add_argument('--algorithms', nargs='+', type=str, default=algorithms.ALGORITHMS)
     parser.add_argument('--task', type=str, default="domain_generalization")
     parser.add_argument('--n_hparams_from', type=int, default=0)
-    parser.add_argument('--n_hparams', type=int, default=20)
+    parser.add_argument('--n_hparams', type=int, default=1)
     parser.add_argument('--output_dir', type=str, required=True)
     parser.add_argument('--data_dir', type=str, required=True)
     parser.add_argument('--seed', type=int, default=0)

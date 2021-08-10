@@ -1,0 +1,72 @@
+description: iib_DomainNet
+
+target:
+  service: amlk8s
+  name: itpeusp40cl
+  vc: resrchvc
+
+
+environment:
+  image: yezhenwang/yezhens_workstation:v1.6
+  setup:
+    - source /opt/conda/bin/activate
+    - pip install h5py
+    - pip install tqdm
+    - pip install wandb
+    - pip install openpyxl
+    - pip install urllib3
+    - pip install wilds
+    - wandb login abc1859572354a66fc85b2ad1d1009add929cbfa
+# environment:
+#   image: pytorch/pytorch:1.8.0-cuda11.1-cudnn8-devel
+
+code:
+  # local directory of the code. this will be uploaded to the server.
+  # $CONFIG_DIR is expanded to the directory of this config file
+  local_dir: /home/v-boli4/teamdrive/users/drluodian/DomainBed
+
+data:
+  remote_dir: data
+
+#/usr/local/bin/python3.9 /Users/luodian/PycharmProjects/IIB/amlt_formatter.py
+jobs:
+  - name: domainbed_IIBv3_ColoredMNIST
+    sku: G1
+    sku_count: 1
+    aml_mpirun:
+      process_count_per_node: 1
+      communicator: "OpenMpi"
+    command:
+      - python -m domainbed.scripts.sweep launch --data_dir=$$PT_DATA_DIR --algorithm IIB --datasets ColoredMNIST --output_dir $$AMLT_OUTPUT_DIR --command_launcher local --skip_confirmation
+  - name: domainbed_IIBv3_RotatedMNIST
+    sku: G1
+    sku_count: 1
+    aml_mpirun:
+      process_count_per_node: 1
+      communicator: "OpenMpi"
+    command:
+      - python -m domainbed.scripts.sweep launch --data_dir=$$PT_DATA_DIR --algorithm IIB --datasets RotatedMNIST --output_dir $$AMLT_OUTPUT_DIR --command_launcher local --skip_confirmation
+  - name: domainbed_IIBv3_VLCS
+    sku: G1
+    sku_count: 1
+    aml_mpirun:
+      process_count_per_node: 1
+      communicator: "OpenMpi"
+    command:
+      - python -m domainbed.scripts.sweep launch --data_dir=$$PT_DATA_DIR --algorithm IIB --datasets VLCS --output_dir $$AMLT_OUTPUT_DIR --command_launcher local --skip_confirmation
+  - name: domainbed_IIBv3_PACS
+    sku: G1
+    sku_count: 1
+    aml_mpirun:
+      process_count_per_node: 1
+      communicator: "OpenMpi"
+    command:
+      - python -m domainbed.scripts.sweep launch --data_dir=$$PT_DATA_DIR --algorithm IIB --datasets PACS --output_dir $$AMLT_OUTPUT_DIR --command_launcher local --skip_confirmation
+  - name: domainbed_IIBv3_OfficeHome
+    sku: G1
+    sku_count: 1
+    aml_mpirun:
+      process_count_per_node: 1
+      communicator: "OpenMpi"
+    command:
+      - python -m domainbed.scripts.sweep launch --data_dir=$$PT_DATA_DIR --algorithm IIB --datasets OfficeHome --output_dir $$AMLT_OUTPUT_DIR --command_launcher local --skip_confirmation
