@@ -1,6 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
 import numpy as np
+
 from domainbed.lib import misc
 
 
@@ -52,6 +53,7 @@ def _hparams(algorithm, dataset, random_seed):
     elif algorithm == 'IIB':
         _hparam('lambda_beta', 1e-4, lambda r: 1e-3 ** r.uniform(-2, 2))
         _hparam('lambda_inv_risks', 10, lambda r: int(10 ** r.uniform(0, 2)))
+        _hparam('enable_bn', True, lambda r: bool(r.choice([True, True])))
 
     elif algorithm == 'LIRR':
         _hparam('lambda', 1.0, lambda r: 10 ** r.uniform(-2, 2))
@@ -117,6 +119,11 @@ def _hparams(algorithm, dataset, random_seed):
 
     # Dataset-and-algorithm-specific hparam definitions. Each block of code
     # below corresponds to exactly one hparam. Avoid nested conditionals.
+
+    if dataset == 'FullColoredMNIST':
+        _hparam('type', 0., lambda r: 0.)
+        _hparam('ratio', 0.9, lambda r: 0.9)
+        _hparam('env_seed', 1, lambda r: 1)
 
     if dataset in SMALL_IMAGES:
         _hparam('lr', 1e-3, lambda r: 10 ** r.uniform(-4.5, -2.5))

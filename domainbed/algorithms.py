@@ -1,14 +1,14 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
+import copy
+from collections import defaultdict
+
+import numpy as np
 import torch
+import torch.autograd as autograd
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.autograd as autograd
 from torch.autograd import Variable
-
-import copy
-import numpy as np
-from collections import defaultdict
 
 from domainbed import networks
 from domainbed.lib.misc import random_pairs_of_minibatches, ParamDict
@@ -271,19 +271,29 @@ class IIB(ERM):
         super(IIB, self).__init__(input_shape, num_classes, num_domains, hparams)
         feat_dim = self.featurizer.n_outputs
         # VIB archs
-        self.encoder = torch.nn.Sequential(
-            nn.Linear(feat_dim, feat_dim),
-            nn.BatchNorm1d(feat_dim),
-            nn.ReLU(inplace=True),
-            nn.Linear(feat_dim, feat_dim),
-            nn.BatchNorm1d(feat_dim),
-            nn.ReLU(inplace=True)
-        )
+        if hparams['enable_bn']:
+            self.encoder = torch.nn.Sequential(
+                nn.Linear(feat_dim, feat_dim),
+                nn.BatchNorm1d(feat_dim),
+                nn.ReLU(inplace=True),
+                nn.Linear(feat_dim, feat_dim),
+                nn.BatchNorm1d(feat_dim),
+                nn.ReLU(inplace=True)
+            )
+        else:
+            self.encoder = torch.nn.Sequential(
+                nn.Linear(feat_dim, feat_dim),
+                nn.ReLU(inplace=True),
+                nn.Linear(feat_dim, feat_dim),
+                nn.ReLU(inplace=True)
+            )
         self.fc3_mu = nn.Linear(feat_dim, feat_dim)  # output = CNN embedding latent variables
         self.fc3_logvar = nn.Linear(feat_dim, feat_dim)  # output = CNN embedding latent variables
         # Inv Risk archs
-        self.inv_classifier = nn.Linear(feat_dim, num_classes)
-        self.env_classifier = nn.Linear(feat_dim + 1, num_classes)
+        self.inv_classifier = networks.Classifier(self.featurizer.n_outputs, num_classes,
+                                                  self.hparams['nonlinear_classifier'])
+        self.env_classifier = networks.Classifier(self.featurizer.n_outputs + 1, num_classes,
+                                                  self.hparams['nonlinear_classifier'])
         self.domain_indx = [torch.full((hparams['batch_size'], 1), indx) for indx in range(num_domains)]
         self.optimizer = torch.optim.Adam(
             list(self.featurizer.parameters()) + list(self.inv_classifier.parameters()) + list(

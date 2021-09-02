@@ -2,7 +2,7 @@ description: iib_DomainNet
 
 target:
   service: amlk8s
-  name: itpeusp40cl
+  name: itpscusv100cl
   vc: resrchvc
 
 

@@ -1,0 +1,5 @@
+**/wandb
+**/train_output
+**/datasets
+./train_outputs
+./datasets

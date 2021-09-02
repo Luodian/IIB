@@ -45,8 +45,9 @@ if __name__ == "__main__":
     parser.add_argument('--steps', type=int, default=None,
                         help='Number of steps. Default is dataset-dependent.')
     parser.add_argument('--batch_size', type=int, default=None)
-    parser.add_argument('--lambda_beta', type=int, default=1e-4)
+    parser.add_argument('--lambda_beta', type=float, default=1e-4)
     parser.add_argument('--lambda_inv_risks', type=int, default=10)
+    parser.add_argument('--enable_bn', type=bool, default=True)
     parser.add_argument('--checkpoint_freq', type=int, default=None,
                         help='Checkpoint every N steps. Default is dataset-dependent.')
     parser.add_argument('--test_envs', type=int, nargs='+', default=[0])
@@ -106,6 +107,7 @@ if __name__ == "__main__":
         hparams['batch_size'] = args.batch_size
     hparams['lambda_beta'] = args.lambda_beta
     hparams['lambda_inv_risk'] = args.lambda_inv_risks
+    hparams['enable_bn'] = args.enable_bn
     wandb_config.update(hparams)
     random.seed(args.seed)
     np.random.seed(args.seed)

@@ -99,7 +99,8 @@ def all_test_env_combinations(n):
 
 
 def make_args_list(n_trials, dataset_names, algorithms, n_hparams_from, n_hparams, steps,
-                   data_dir, task, holdout_fraction, single_test_envs, hparams, hparams_path):
+                   data_dir, task, holdout_fraction, single_test_envs, hparams, hparams_path, lambda_beta,
+                   lambda_inv_risks, enable_bn):
     args_list = []
     for trial_seed in range(n_trials):
         for dataset in dataset_names:
@@ -121,6 +122,9 @@ def make_args_list(n_trials, dataset_names, algorithms, n_hparams_from, n_hparam
                         train_args['data_dir'] = data_dir
                         train_args['task'] = task
                         train_args['trial_seed'] = trial_seed
+                        train_args['lambda_beta'] = lambda_beta
+                        train_args['lambda_inv_risks'] = lambda_inv_risks
+                        train_args['enable_bn'] = enable_bn
                         train_args['seed'] = misc.seed_hash(dataset,
                                                             algorithm, test_envs, hparams_seed, trial_seed)
                         if steps is not None:
@@ -159,6 +163,9 @@ if __name__ == "__main__":
     parser.add_argument('--hparams', type=str, default=None)
     parser.add_argument('--hparams_path', type=str, default=None)
     parser.add_argument('--holdout_fraction', type=float, default=0.2)
+    parser.add_argument('--lambda_beta', type=float, default=1e-4)
+    parser.add_argument('--lambda_inv_risks', type=int, default=10)
+    parser.add_argument('--enable_bn', type=bool, default=True)
     parser.add_argument('--single_test_envs', action='store_true')
     parser.add_argument('--skip_confirmation', action='store_true')
     args = parser.parse_args()
@@ -175,7 +182,10 @@ if __name__ == "__main__":
         holdout_fraction=args.holdout_fraction,
         single_test_envs=args.single_test_envs,
         hparams=args.hparams,
-        hparams_path=args.hparams_path
+        hparams_path=args.hparams_path,
+        lambda_beta=args.lambda_beta,
+        lambda_inv_risks=args.lambda_inv_risks,
+        enable_bn=args.enable_bn
     )
 
     jobs = [Job(train_args, args.output_dir) for train_args in args_list]

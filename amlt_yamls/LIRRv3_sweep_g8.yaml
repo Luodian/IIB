@@ -1,8 +1,8 @@
-description: LIRRv3_sweep
+description: LIRRv3_g8
 
 target:
   service: amlk8s
-  name: itpeusp40cl
+  name: itpscusv100cl
   vc: resrchvc
 
 
@@ -29,11 +29,11 @@ data:
   remote_dir: data
 
 jobs:
-  - name: domainbed_LIRRv3_ColoredMNIST
+  - name: domainbed_LIRRv3_PACS_g8
     sku: G8
     sku_count: 1
     aml_mpirun:
-      process_count_per_node: 1
+      process_count_per_node: 8
       communicator: "OpenMpi"
     command:
-      - python -m domainbed.scripts.sweep launch --data_dir=$$PT_DATA_DIR --algorithm LIRR --datasets ColoredMNIST --output_dir $$AMLT_OUTPUT_DIR --command_launcher local --skip_confirmation
+      - python -m domainbed.scripts.sweep launch --data_dir=$$PT_DATA_DIR --algorithm LIRR --datasets PACS --output_dir $$AMLT_OUTPUT_DIR --command_launcher multi_gpu --skip_confirmation
