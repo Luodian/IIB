@@ -64,7 +64,7 @@ def print_row(row, colwidth=10, latex=False):
 
     def format_val(x):
         if np.issubdtype(type(x), np.floating):
-            x = "{:.10f}".format(x)
+            x = "{:6f}".format(x)
         return str(x).ljust(colwidth)[:colwidth]
     print(sep.join([format_val(x) for x in row]), end_)
 

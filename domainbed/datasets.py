@@ -2,6 +2,7 @@
 
 import os
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torchvision.datasets.folder
@@ -21,6 +22,7 @@ DATASETS = [
     "Debug224",
     # Small images
     "VerticalLine",
+    "VHLine",
     "FullColoredMNIST",
     "ColoredMNIST",
     "RotatedMNIST",
@@ -96,6 +98,37 @@ class MultipleEnvironmentCIFAR10(MultipleDomainDataset):
         original_dataset_tr = CIFAR10(root, train=True, download=True)
         original_dataset_te = CIFAR10(root, train=False, download=True)
 
+        original_images = np.concatenate((original_dataset_tr.data, original_dataset_te.data))
+        original_labels = np.concatenate((original_dataset_tr.targets, original_dataset_te.targets))
+
+        shuffle = torch.randperm(len(original_images))
+
+        original_images = original_images[shuffle]
+        original_labels = original_labels[shuffle]
+
+        self.datasets = []
+
+        for i in range(len(environments)):
+            self.datasets.append(dataset_transform(original_images, original_labels, environments[i]))
+
+        self.input_shape = input_shape
+        self.num_classes = num_classes
+
+class MultipleEnvironmentMNIST(MultipleDomainDataset):
+    def __init__(self, root, environments, dataset_transform, input_shape,
+                 num_classes):
+        super().__init__()
+        if root is None:
+            raise ValueError('Data directory not specified!')
+
+        self.colors = torch.FloatTensor(
+            [[0, 100, 0], [188, 143, 143], [255, 0, 0], [255, 215, 0], [0, 255, 0], [65, 105, 225], [0, 225, 225],
+             [0, 0, 255], [255, 20, 147], [160, 160, 160]])
+        self.random_colors = torch.randint(255, (10, 3)).float()
+
+        original_dataset_tr = MNIST(root, train=True, download=True)
+        original_dataset_te = MNIST(root, train=False, download=True)
+
         original_images = torch.cat((original_dataset_tr.data,
                                      original_dataset_te.data))
 
@@ -108,7 +141,7 @@ class MultipleEnvironmentCIFAR10(MultipleDomainDataset):
         original_labels = original_labels[shuffle]
 
         self.datasets = []
-
+        self.environments = environments
         for i in range(len(environments)):
             images = original_images[i::len(environments)]
             labels = original_labels[i::len(environments)]
@@ -117,93 +150,163 @@ class MultipleEnvironmentCIFAR10(MultipleDomainDataset):
         self.input_shape = input_shape
         self.num_classes = num_classes
 
-class MultipleEnvironmentMNIST(MultipleDomainDataset):
-    def __init__(self, root, environments, dataset_transform, input_shape,
-                 num_classes):
-        super().__init__()
-        if root is None:
-            raise ValueError('Data directory not specified!')
+    def __getitem__(self, index):
+        return self.datasets[index]
 
-        original_dataset_tr = MNIST(root, train=True, download=True)
-        original_dataset_te = MNIST(root, train=False, download=True)
+    def __len__(self):
+        return len(self.datasets)
 
-        original_images = torch.cat((original_dataset_tr.train_data,
-                                     original_dataset_te.test_data))
 
-        original_labels = torch.cat((original_dataset_tr.train_labels,
-                                     original_dataset_te.test_labels))
-
-        shuffle = torch.randperm(len(original_images))
-
-        original_images = original_images[shuffle]
-        original_labels = original_labels[shuffle]
-
-        self.datasets = []
-
-        for i in range(len(environments)):
-            images = original_images[i::len(environments)]
-            labels = original_labels[i::len(environments)]
-            self.datasets.append(dataset_transform(images, labels, environments[i]))
-
-        self.input_shape = input_shape
-        self.num_classes = num_classes
-
-class VerticalLine(MultipleEnvironmentCIFAR10):
-    ENVIRONMENT_NAMES = [0, 1, 2]
+class VHLine(MultipleEnvironmentCIFAR10):
+    ENVIRONMENT_NAMES = [0, 1]
+    N_WORKERS = 0
+    N_STEPS = 10001
 
     def __init__(self, root, test_envs, hparams):
-        self.scale = [-2, 0, 2]
-        MY_COMBINE = [[self.scale[0], True, 0.0], [self.scale[1], True, 1.0], [self.scale[2], True, self.ratio]]
+        self.domain_label = [0, 1]
+        # print("MY COMBINE:", MY_COMBINE)
+        self.input_shape = (3, 32, 32)
+        self.num_classes = 10
+        super(VHLine, self).__init__(root, self.domain_label, self.color_dataset, (3, 32, 32,), 10)
+
+    def color_dataset(self, images, labels, environment):
+        # Add a line to the last channel and vary its brightness during testing.
+        images = self.add_vhline(images, labels, b_scale=1, env=environment)
+        for i in range(5):
+            rand_indx = np.random.randint(0, images.shape[0])
+            self._plot(images[rand_indx])
+
+        x = torch.Tensor(images).permute(0, 3, 1, 2)
+        y = torch.Tensor(labels).view(-1).long()
+
+        return TensorDataset(x, y)
+
+    def add_vhline(self, images, labels, b_scale, env):
+        images = np.divide(images, 255.0)
+        if env == 1:
+            return images
+
+        def configurations(images, cond_indx, cls):
+            # To create the ten-valued spurious feature, we consider a vertical line passing through the middle of each channel,
+            # and also additionally the horizontal line through the first channel.
+            if cls == 0:
+                images[cond_indx, :, 16:17, 0] = np.add(images[cond_indx, :, 16:17, 0], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, :, 16:17, 1] = np.add(images[cond_indx, :, 16:17, 1], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, :, 16:17, 2] = np.add(images[cond_indx, :, 16:17, 2], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, 16:17, :, 0] = np.add(images[cond_indx, 16:17, :, 2], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+            elif cls == 1:
+                images[cond_indx, :, 16:17, 0] = np.add(images[cond_indx, :, 16:17, 0], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, :, 16:17, 1] = np.add(images[cond_indx, :, 16:17, 1], 0.5 - 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, :, 16:17, 2] = np.add(images[cond_indx, :, 16:17, 2], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, 16:17, :, 0] = np.add(images[cond_indx, 16:17, :, 2], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+            elif cls == 2:
+                images[cond_indx, :, 16:17, 0] = np.add(images[cond_indx, :, 16:17, 0], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, :, 16:17, 1] = np.add(images[cond_indx, :, 16:17, 1], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, :, 16:17, 2] = np.add(images[cond_indx, :, 16:17, 2], 0.5 - 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, 16:17, :, 0] = np.add(images[cond_indx, 16:17, :, 2], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+            elif cls == 3:
+                images[cond_indx, :, 16:17, 0] = np.add(images[cond_indx, :, 16:17, 0], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, :, 16:17, 1] = np.add(images[cond_indx, :, 16:17, 1], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, :, 16:17, 2] = np.add(images[cond_indx, :, 16:17, 2], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, 16:17, :, 0] = np.add(images[cond_indx, 16:17, :, 2], 0.5 - 0.5 * np.random.uniform(-b_scale, b_scale))
+            elif cls == 4:
+                images[cond_indx, :, 16:17, 0] = np.add(images[cond_indx, :, 16:17, 0], 0.5 - 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, :, 16:17, 1] = np.add(images[cond_indx, :, 16:17, 1], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, :, 16:17, 2] = np.add(images[cond_indx, :, 16:17, 2], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, 16:17, :, 0] = np.add(images[cond_indx, 16:17, :, 2], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+            elif cls == 5:
+                images[cond_indx, :, 16:17, 0] = np.add(images[cond_indx, :, 16:17, 0], 0.5 - 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, :, 16:17, 1] = np.add(images[cond_indx, :, 16:17, 1], 0.5 - 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, :, 16:17, 2] = np.add(images[cond_indx, :, 16:17, 2], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, 16:17, :, 0] = np.add(images[cond_indx, 16:17, :, 2], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+            elif cls == 6:
+                images[cond_indx, :, 16:17, 0] = np.add(images[cond_indx, :, 16:17, 0], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, :, 16:17, 1] = np.add(images[cond_indx, :, 16:17, 1], 0.5 - 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, :, 16:17, 2] = np.add(images[cond_indx, :, 16:17, 2], 0.5 - 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, 16:17, :, 0] = np.add(images[cond_indx, 16:17, :, 2], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+            elif cls == 7:
+                images[cond_indx, :, 16:17, 0] = np.add(images[cond_indx, :, 16:17, 0], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, :, 16:17, 1] = np.add(images[cond_indx, :, 16:17, 1], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, :, 16:17, 2] = np.add(images[cond_indx, :, 16:17, 2], 0.5 - 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, 16:17, :, 0] = np.add(images[cond_indx, 16:17, :, 2], 0.5 - 0.5 * np.random.uniform(-b_scale, b_scale))
+            elif cls == 8:
+                images[cond_indx, :, 16:17, 0] = np.add(images[cond_indx, :, 16:17, 0], 0.5 - 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, :, 16:17, 1] = np.add(images[cond_indx, :, 16:17, 1], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, :, 16:17, 2] = np.add(images[cond_indx, :, 16:17, 2], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, 16:17, :, 0] = np.add(images[cond_indx, 16:17, :, 2], 0.5 - 0.5 * np.random.uniform(-b_scale, b_scale))
+            elif cls == 9:
+                images[cond_indx, :, 16:17, 0] = np.add(images[cond_indx, :, 16:17, 0], 0.5 - 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, :, 16:17, 1] = np.add(images[cond_indx, :, 16:17, 1], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, :, 16:17, 2] = np.add(images[cond_indx, :, 16:17, 2], 0.5 + 0.5 * np.random.uniform(-b_scale, b_scale))
+                images[cond_indx, 16:17, :, 0] = np.add(images[cond_indx, 16:17, :, 2], 0.5 - 0.5 * np.random.uniform(-b_scale, b_scale))
+
+            return images
+
+        for indx in range(self.num_classes):
+            class_cond_index = (labels == indx)
+            p_ii_arr = np.random.choice([True, False], p=[0.5, 0.5], size=class_cond_index.shape[0])
+            class_cond_index = np.multiply(class_cond_index, p_ii_arr)
+            images = configurations(images, class_cond_index, indx)
+            for indx_j in range(self.num_classes):
+                if indx_j != indx:
+                    other_class_cond_index = (labels == indx_j)
+                    p_ij_arr = np.random.choice([True, False], p=[0.05, 0.95], size=other_class_cond_index.shape[0])
+                    other_class_cond_index = np.multiply(other_class_cond_index, p_ij_arr)
+                    images = configurations(images, other_class_cond_index, indx_j)
+
+        return images
+
+    def _plot(self, img):
+        plt.imshow(img)
+        plt.axis('off')
+        plt.tight_layout()
+        plt.show()
+
+
+class VerticalLine(MultipleEnvironmentCIFAR10):
+    ENVIRONMENT_NAMES = [0, 1, 2, 3, 4, 5]
+
+    def __init__(self, root, test_envs, hparams):
+        self.scale = [0, -4, -2, 0, 2, 4]
 
         # print("MY COMBINE:", MY_COMBINE)
-        super(VerticalLine, self).__init__(root, MY_COMBINE, self.color_dataset, (3, 28, 28,), 10)
-        self.input_shape = (3, 28, 28)
+        super(VerticalLine, self).__init__(root, self.scale, self.color_dataset, (3, 32, 32,), 10)
+        self.input_shape = (3, 32, 32)
         self.num_classes = 10
 
     def color_dataset(self, images, labels, environment):
-        # set the seed
-        original_seed = torch.cuda.initial_seed()
-        torch.manual_seed(environment[0])
-        shuffle = torch.randperm(len(self.colors))
-        self.colors_ = self.colors[shuffle] if environment[1] else self.random_colors[shuffle]
-        torch.manual_seed(environment[0])
-        ber = self.torch_bernoulli_(environment[2], len(labels))
-        # print("ber:", len(ber), sum(ber))
-        torch.manual_seed(original_seed)
+        # Add a line to the last channel and vary its brightness during testing.
+        images = self.add_line(images, environment)
+        # for i in range(5):
+        #     rand_indx = np.random.randint(0, images.shape[0])
+        #     self._plot(images[rand_indx])
+        # images = torch.stack([images, images], dim=1)
 
-        images = torch.stack([images, images, images], dim=1)
-        # binarize the images
-        images = (images > 0).float()
-        y = labels.view(-1).long()
-        color_label = torch.zeros_like(y).long()
+        x = torch.Tensor(images).permute(0, 3, 1, 2)
+        y = torch.Tensor(labels).view(-1).long()
 
-        # Apply the color to the image
-        for img_idx in range(len(images)):
-            if ber[img_idx] > 0:
-                color_label[img_idx] = labels[img_idx]
-                for channels in range(3):
-                    images[img_idx, channels, :, :] = images[img_idx, channels, :, :] * \
-                                                      self.colors_[labels[img_idx].long(), channels]
-            else:
-                color = torch.randint(10, [1])[0]  # random color, regardless of label
-                color_label[img_idx] = color
-                for channels in range(3):
-                    images[img_idx, channels, :, :] = images[img_idx, channels, :, :] * self.colors_[color, channels]
+        return TensorDataset(x, y)
 
-        x = images.float().div_(255.0)
-        return TensorDataset(True, x, y, color_label)
+    def add_line(self, images, b):
+        images = np.divide(images, 255.0)
+        # add 4 to last channel to avoid negative values in this channel.
+        images[:, :, :, 2] = np.add(images[:, :, :, 2], 4)
+        images[:, :, 16:17, 2] = np.add(images[:, :, 16:17, 2], np.float(b))
+        images[:, :, :, 2] = np.divide(images[:, :, :, 2], 9)
+        return images
 
-    def torch_bernoulli_(self, p, size):
-        return (torch.rand(size) < p).float()
+    def _plot(self, img):
+        plt.imshow(img)
+        plt.axis('off')
+        plt.tight_layout()
+        plt.show()
 
-    def torch_xor_(self, a, b):
-        return (a - b).abs()
 
 class FullColoredMNIST(MultipleEnvironmentMNIST):
     ENVIRONMENT_NAMES = [0, 1, 2]
 
     def __init__(self, root, test_envs, hparams):
-        self.data_type = hparams['data_type']
+        self.data_type = hparams['type']
         if self.data_type == 0:
             self.ratio = hparams.get('ratio', 0.9)
             self.env_seed = hparams.get('env_seed', 1)
@@ -224,7 +327,7 @@ class FullColoredMNIST(MultipleEnvironmentMNIST):
         self.colors_ = self.colors[shuffle] if environment[1] else self.random_colors[shuffle]
         torch.manual_seed(environment[0])
         ber = self.torch_bernoulli_(environment[2], len(labels))
-        # print("ber:", len(ber), sum(ber))
+        print("ber:", len(ber), sum(ber))
         torch.manual_seed(original_seed)
 
         images = torch.stack([images, images, images], dim=1)
@@ -247,6 +350,9 @@ class FullColoredMNIST(MultipleEnvironmentMNIST):
                     images[img_idx, channels, :, :] = images[img_idx, channels, :, :] * self.colors_[color, channels]
 
         x = images.float().div_(255.0)
+        for i in range(5):
+            rand_indx = np.random.randint(0, x.shape[0])
+            self._plot(images[rand_indx])
         return TensorDataset(True, x, y, color_label)
 
     def torch_bernoulli_(self, p, size):
@@ -254,6 +360,12 @@ class FullColoredMNIST(MultipleEnvironmentMNIST):
 
     def torch_xor_(self, a, b):
         return (a - b).abs()
+
+    def _plot(self, img):
+        plt.imshow(torch.permute(img, (1, 2, 0)))
+        plt.axis('off')
+        plt.tight_layout()
+        plt.show()
 
 class ColoredMNIST(MultipleEnvironmentMNIST):
     ENVIRONMENTS = ['+90%', '+80%', '-90%']
@@ -297,7 +409,7 @@ class ColoredMNIST(MultipleEnvironmentMNIST):
 
 class RotatedMNIST(MultipleEnvironmentMNIST):
     ENVIRONMENTS = ['0', '15', '30', '45', '60', '75']
-
+    N_WORKERS = 0
     def __init__(self, root, test_envs, hparams):
         super(RotatedMNIST, self).__init__(root, [0, 15, 30, 45, 60, 75],
                                            self.rotate_dataset, (1, 28, 28,), 10)

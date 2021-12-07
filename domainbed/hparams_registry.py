@@ -34,7 +34,7 @@ def _hparams(algorithm, dataset, random_seed):
     _hparam('resnet_dropout', 0., lambda r: r.choice([0., 0.1, 0.5]))
     _hparam('class_balanced', False, lambda r: False)
     # TODO: nonlinear classifiers disabled
-    _hparam('nonlinear_classifier', True,
+    _hparam('nonlinear_classifier', False,
             lambda r: bool(r.choice([True, True])))
 
     # Algorithm-specific hparam definitions. Each block of code below
@@ -54,6 +54,12 @@ def _hparams(algorithm, dataset, random_seed):
         _hparam('lambda_beta', 1e-4, lambda r: 1e-3 ** r.uniform(-2, 2))
         _hparam('lambda_inv_risks', 10, lambda r: int(10 ** r.uniform(0, 2)))
         _hparam('enable_bn', True, lambda r: bool(r.choice([True, True])))
+
+    elif algorithm == 'IBIRM':
+        _hparam('irm_lambda', 0, lambda r: 10 ** r.uniform(-1, 5))
+        _hparam('ib_lambda', 10, lambda r: int(10 ** r.uniform(-1, 5)))
+        _hparam('irm_penalty_anneal_iters', 500, lambda r: int(10 ** r.uniform(0, 4)))
+        _hparam('ib_penalty_anneal_iters', 500, lambda r: int(10 ** r.uniform(0, 4)))
 
     elif algorithm == 'LIRR':
         _hparam('lambda', 1.0, lambda r: 10 ** r.uniform(-2, 2))

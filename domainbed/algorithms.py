@@ -36,6 +36,7 @@ ALGORITHMS = [
     'IGA',
     'SelfReg',
     'IIB',
+    'IBIRM',
     'LIRR'
 ]
 
@@ -627,6 +628,51 @@ class IRM(ERM):
         self.update_count += 1
         return {'loss': loss.item(), 'nll': nll.item(),
                 'penalty': penalty.item()}
+
+
+class IBIRM(IRM):
+    """Invariant Risk Minimization"""
+
+    def __init__(self, input_shape, num_classes, num_domains, hparams):
+        super(IBIRM, self).__init__(input_shape, num_classes, num_domains,
+                                    hparams)
+
+    def update(self, minibatches, unlabeled=None):
+        penalty_weight = (self.hparams['irm_lambda'] if self.update_count
+                                                        >= self.hparams['irm_penalty_anneal_iters'] else 0.0)  # todo
+
+        ib_penalty_weight = (self.hparams['ib_lambda'] if self.update_count
+                                                          >= self.hparams['ib_penalty_anneal_iters'] else 0.0)
+
+        nll = 0.
+        penalty = 0.
+        all_x = torch.cat([x for x, y in minibatches])
+        all_y = torch.cat([y for x, y in minibatches])
+        inter_logits = self.featurizer(all_x)
+        all_logits = self.classifier(inter_logits)
+        all_logits_idx = 0
+        for i, (x, y) in enumerate(minibatches):
+            logits = all_logits[all_logits_idx:all_logits_idx + x.shape[0]]
+            all_logits_idx += x.shape[0]
+            nll += F.cross_entropy(logits, y)
+            penalty += self._irm_penalty(logits, y)
+        nll /= len(minibatches)
+        penalty /= len(minibatches)
+        loss = nll + (penalty_weight * penalty)
+        var_loss = inter_logits.var(dim=0).mean()
+        loss += ib_penalty_weight * var_loss
+
+        # if self.update_count == self.hparams['ib_penalty_anneal_iters']:
+        #     var_loss = inter_logits.var(dim=0).mean()
+        #     loss += ib_penalty_weight * var_loss
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        self.update_count += 1
+        return {'loss': loss.item(), 'nll': nll.item(),
+                'penalty': penalty.item(), "var": var_loss.item()}
 
 
 class VREx(ERM):

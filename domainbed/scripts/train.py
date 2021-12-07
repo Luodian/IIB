@@ -7,20 +7,18 @@ import os
 import random
 import sys
 import time
-import uuid
 
-import numpy as np
 import PIL
-import torch
-import torchvision
+import numpy as np
 import torch.utils.data
+import torchvision
+import wandb
 
+from domainbed import algorithms
 from domainbed import datasets
 from domainbed import hparams_registry
-from domainbed import algorithms
 from domainbed.lib import misc
 from domainbed.lib.fast_data_loader import InfiniteDataLoader, FastDataLoader
-import wandb
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
@@ -305,9 +303,6 @@ if __name__ == "__main__":
             algorithm_dict = algorithm.state_dict()
             start_step = step + 1
             checkpoint_vals = collections.defaultdict(lambda: [])
-
-            if args.save_model_every_checkpoint:
-                save_checkpoint(f'model_step{step}.pkl')
 
     save_checkpoint('model.pkl')
 
