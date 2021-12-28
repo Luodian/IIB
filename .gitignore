@@ -1,11 +1,11 @@
 __pycache__
 domainbed/facebook.py
 
-domainbed/data/*
-train_output/*
+domainbed/data/**
+train_output/**
 
 **/.DS_Store
 
-.idea/*
-amlt_yamls/*
-snippets/*
+.idea/**
+amlt_yamls/**
+snippets/**
