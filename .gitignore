@@ -3,3 +3,7 @@ domainbed/facebook.py
 
 domainbed/data/*
 train_output/*
+
+.DS_Store
+
+.idea/*
