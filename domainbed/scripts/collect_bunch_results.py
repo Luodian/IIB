@@ -14,5 +14,5 @@ for item in path_list:
     c_path = os.path.join(args.input_dir, item)
     print(c_path)
     print("*" * 60)
-    cmd = "/anaconda/envs/pt/bin/python -u collect_results.py --input_dir {}".format(c_path)
+    cmd = "/home/v-boli4/miniconda3/envs/torch/bin/python -u collect_results.py --input_dir {}".format(c_path)
     subprocess.call(cmd, shell=True)

@@ -1,14 +1,16 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
+from torchvision.datasets import MNIST
+import xml.etree.ElementTree as ET
+from zipfile import ZipFile
 import argparse
+import tarfile
+import shutil
+import gdown
+import uuid
 import json
 import os
-import shutil
-import tarfile
-from zipfile import ZipFile
 
-import gdown
-from torchvision.datasets import MNIST
 from wilds.datasets.camelyon17_dataset import Camelyon17Dataset
 from wilds.datasets.fmow_dataset import FMoWDataset
 
@@ -114,7 +116,7 @@ def download_pacs(data_dir):
     # Original URL: http://www.eecs.qmul.ac.uk/~dl307/project_iccv2017
     full_path = stage_path(data_dir, "PACS")
 
-    download_and_extract("https://drive.google.com/uc?id=0B6x7gtvErXgfbF9CSk53UkRxVzg",
+    download_and_extract("https://drive.google.com/uc?id=1JFr8f805nMUelQWWmfnJR3y4_SYoN5Pd",
                          os.path.join(data_dir, "PACS.zip"))
 
     os.rename(os.path.join(data_dir, "kfold"),
@@ -127,7 +129,7 @@ def download_office_home(data_dir):
     # Original URL: http://hemanthdv.org/OfficeHome-Dataset/
     full_path = stage_path(data_dir, "office_home")
 
-    download_and_extract("https://drive.google.com/uc?id=0B81rNlvomiwed0V1YUxQdC1uOTg",
+    download_and_extract("https://drive.google.com/uc?id=1uY0pj7oFsjMxRwaD3Sxy0jgel0fsYXLC",
                          os.path.join(data_dir, "office_home.zip"))
 
     os.rename(os.path.join(data_dir, "OfficeHomeDataset_10072016"),
@@ -141,9 +143,9 @@ def download_domain_net(data_dir):
     full_path = stage_path(data_dir, "domain_net")
 
     urls = [
-        "http://csr.bu.edu/ftp/visda/2019/multi-source/groundtruth/clipart.zip",
-        "http://csr.bu.edu/ftp/visda/2019/multi-source/infograph.zip",
-        "http://csr.bu.edu/ftp/visda/2019/multi-source/groundtruth/painting.zip",
+        # "http://csr.bu.edu/ftp/visda/2019/multi-source/groundtruth/clipart.zip",
+        # "http://csr.bu.edu/ftp/visda/2019/multi-source/infograph.zip",
+        # "http://csr.bu.edu/ftp/visda/2019/multi-source/groundtruth/painting.zip",
         "http://csr.bu.edu/ftp/visda/2019/multi-source/quickdraw.zip",
         "http://csr.bu.edu/ftp/visda/2019/multi-source/real.zip",
         "http://csr.bu.edu/ftp/visda/2019/multi-source/sketch.zip"
@@ -267,6 +269,6 @@ if __name__ == "__main__":
     # download_domain_net(args.data_dir)
     # download_vlcs(args.data_dir)
     # download_terra_incognita(args.data_dir)
-    # download_sviro(args.data_dir)
+    download_sviro(args.data_dir)
     Camelyon17Dataset(root_dir=args.data_dir, download=True)
     FMoWDataset(root_dir=args.data_dir, download=True)
